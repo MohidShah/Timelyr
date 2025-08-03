@@ -206,12 +206,6 @@ export const ProfilePage: React.FC = () => {
                   helper="This will be used for custom link URLs: timelyr.com/@username/link-name"
                 />
 
-                <Input
-                  label="Email"
-                  value={formData.email}
-                  disabled
-                  helper="Email cannot be changed. Contact support if you need to update this."
-                />
 
                 {errors.general && (
                   <div className="p-3 bg-red-50 border border-red-200 rounded-lg">
@@ -259,24 +253,14 @@ export const ProfilePage: React.FC = () => {
                 <h2 className="text-lg font-semibold text-gray-800">Security</h2>
               </CardHeader>
               <CardContent className="space-y-4">
-                <div className="flex items-center justify-between">
+                <div className="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
                   <div>
-                    <h3 className="font-medium text-gray-800">Password</h3>
-                    <p className="text-sm text-gray-600">Last updated 30 days ago</p>
+                    <h3 className="font-medium text-gray-800">Account Security</h3>
+                    <p className="text-sm text-gray-600">Manage your account security settings</p>
                   </div>
-                  <Button variant="secondary">
+                  <Button variant="secondary" disabled>
                     <Shield className="w-4 h-4 mr-2" />
-                    Change Password
-                  </Button>
-                </div>
-
-                <div className="flex items-center justify-between">
-                  <div>
-                    <h3 className="font-medium text-gray-800">Two-Factor Authentication</h3>
-                    <p className="text-sm text-gray-600">Add an extra layer of security</p>
-                  </div>
-                  <Button variant="secondary">
-                    Enable 2FA
+                    Coming Soon
                   </Button>
                 </div>
               </CardContent>

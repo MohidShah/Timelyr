@@ -16,6 +16,9 @@ export const HomePage: React.FC = () => {
     try {
       const slug = generateSlug(title, date);
       
+      // Get current user if logged in
+      const { data: { user } } = await supabase.auth.getUser();
+      
       const { data, error } = await supabase
         .from('timezone_links')
         .insert({
@@ -24,7 +27,7 @@ export const HomePage: React.FC = () => {
           timezone,
           slug,
           is_active: true,
-          user_id: null, // Anonymous for now
+          user_id: user?.id || null, // Use user ID if logged in, otherwise anonymous
         })
         .select()
         .single();

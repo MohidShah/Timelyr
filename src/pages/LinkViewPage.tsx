@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { useParams, Link } from 'react-router-dom';
-import { Calendar, Clock, Copy, ExternalLink, Plus } from 'lucide-react';
+import { useParams, Link, useNavigate } from 'react-router-dom';
+import { Calendar, Clock, Copy, ExternalLink, Plus, ArrowLeft, Share2 } from 'lucide-react';
 import { format } from 'date-fns';
 import { formatInTimezone, getUserTimezone } from '../lib/timezone';
 import { BusinessHoursIndicator } from '../components/BusinessHoursIndicator';
@@ -17,6 +17,7 @@ export const LinkViewPage: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [copied, setCopied] = useState(false);
   const [timeRemaining, setTimeRemaining] = useState('');
+  const navigate = useNavigate();
 
   useEffect(() => {
     if (!slug) return;
@@ -126,6 +127,26 @@ END:VCALENDAR`;
     URL.revokeObjectURL(url);
   };
 
+  const handleShare = async () => {
+    if (!link) return;
+    
+    const url = window.location.href;
+    
+    if (navigator.share) {
+      try {
+        await navigator.share({
+          title: link.title,
+          text: `Join me for: ${link.title}`,
+          url: url,
+        });
+      } catch (error) {
+        // Fallback to copy
+        handleCopyLink();
+      }
+    } else {
+      handleCopyLink();
+    }
+  };
   if (loading) {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
@@ -161,6 +182,18 @@ END:VCALENDAR`;
   return (
     <div className="min-h-screen bg-gray-50 py-12">
       <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
+        {/* Back Button */}
+        <div className="mb-6">
+          <Button
+            variant="tertiary"
+            onClick={() => navigate(-1)}
+            className="flex items-center"
+          >
+            <ArrowLeft className="w-4 h-4 mr-2" />
+            Back
+          </Button>
+        </div>
+
         {/* Main Event Card */}
         <Card className="mb-8">
           <CardHeader className="text-center">
@@ -213,6 +246,10 @@ END:VCALENDAR`;
               <Button onClick={handleCopyLink} variant="secondary" size="lg">
                 <Copy className="w-4 h-4 mr-2" />
                 {copied ? 'Copied!' : 'Copy Link'}
+              </Button>
+              <Button onClick={handleShare} variant="secondary" size="lg">
+                <Share2 className="w-4 h-4 mr-2" />
+                Share
               </Button>
             </div>
           </CardContent>

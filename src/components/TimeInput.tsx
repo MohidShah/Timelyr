@@ -4,7 +4,7 @@ import { Input } from './ui/Input';
 import { Card, CardContent, CardHeader } from './ui/Card';
 import { parseNaturalLanguage, getUserTimezone } from '../lib/timezone';
 import { format, addDays, setHours, setMinutes } from 'date-fns';
-import { Clock, Calendar, Globe } from 'lucide-react';
+import { Clock, Calendar, Globe, MapPin } from 'lucide-react';
 
 interface TimeInputProps {
   onTimeSelect: (date: Date, timezone: string, title: string) => void;
@@ -18,6 +18,7 @@ export const TimeInput: React.FC<TimeInputProps> = ({ onTimeSelect }) => {
   const [selectedDate, setSelectedDate] = useState(format(new Date(), 'yyyy-MM-dd'));
   const [selectedTime, setSelectedTime] = useState('14:00');
   const [selectedTimezone, setSelectedTimezone] = useState(getUserTimezone());
+  const [useAutoDetection, setUseAutoDetection] = useState(true);
 
   useEffect(() => {
     if (naturalInput) {
@@ -30,7 +31,7 @@ export const TimeInput: React.FC<TimeInputProps> = ({ onTimeSelect }) => {
 
   const handleNaturalSubmit = () => {
     if (parsedTime && title) {
-      onTimeSelect(parsedTime, getUserTimezone(), title);
+      onTimeSelect(parsedTime, useAutoDetection ? getUserTimezone() : selectedTimezone, title);
     }
   };
 
@@ -39,7 +40,7 @@ export const TimeInput: React.FC<TimeInputProps> = ({ onTimeSelect }) => {
       const [hours, minutes] = selectedTime.split(':').map(Number);
       const date = new Date(selectedDate);
       const finalDate = setHours(setMinutes(date, minutes), hours);
-      onTimeSelect(finalDate, selectedTimezone, title);
+      onTimeSelect(finalDate, useAutoDetection ? getUserTimezone() : selectedTimezone, title);
     }
   };
 
@@ -118,6 +119,49 @@ export const TimeInput: React.FC<TimeInputProps> = ({ onTimeSelect }) => {
               ))}
             </div>
 
+            {/* Timezone Selection for Natural Language */}
+            <div className="space-y-3">
+              <div className="flex items-center space-x-3">
+                <input
+                  type="checkbox"
+                  id="autoDetect"
+                  checked={useAutoDetection}
+                  onChange={(e) => setUseAutoDetection(e.target.checked)}
+                  className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
+                />
+                <label htmlFor="autoDetect" className="text-sm font-medium text-gray-700">
+                  <MapPin className="w-4 h-4 inline mr-1" />
+                  Auto-detect my timezone
+                </label>
+              </div>
+              
+              {!useAutoDetection && (
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    <Globe className="w-4 h-4 inline mr-1" />
+                    Select Timezone
+                  </label>
+                  <select
+                    value={selectedTimezone}
+                    onChange={(e) => setSelectedTimezone(e.target.value)}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  >
+                    <optgroup label="Common Timezones">
+                      <option value="America/New_York">Eastern Time (ET)</option>
+                      <option value="America/Chicago">Central Time (CT)</option>
+                      <option value="America/Denver">Mountain Time (MT)</option>
+                      <option value="America/Los_Angeles">Pacific Time (PT)</option>
+                      <option value="Europe/London">London (GMT/BST)</option>
+                      <option value="Europe/Paris">Paris (CET/CEST)</option>
+                      <option value="Asia/Tokyo">Tokyo (JST)</option>
+                      <option value="Asia/Shanghai">Beijing (CST)</option>
+                      <option value="Asia/Karachi">Islamabad (PKT)</option>
+                      <option value="Australia/Sydney">Sydney (AEDT/AEST)</option>
+                    </optgroup>
+                  </select>
+                </div>
+              )}
+            </div>
             <Button
               onClick={handleNaturalSubmit}
               disabled={!parsedTime || !title}
@@ -144,29 +188,48 @@ export const TimeInput: React.FC<TimeInputProps> = ({ onTimeSelect }) => {
               />
             </div>
 
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                <Globe className="w-4 h-4 inline mr-1" />
-                Timezone
-              </label>
-              <select
-                value={selectedTimezone}
-                onChange={(e) => setSelectedTimezone(e.target.value)}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-              >
-                <optgroup label="Common Timezones">
-                  <option value="America/New_York">Eastern Time (ET)</option>
-                  <option value="America/Chicago">Central Time (CT)</option>
-                  <option value="America/Denver">Mountain Time (MT)</option>
-                  <option value="America/Los_Angeles">Pacific Time (PT)</option>
-                  <option value="Europe/London">London (GMT/BST)</option>
-                  <option value="Europe/Paris">Paris (CET/CEST)</option>
-                  <option value="Asia/Tokyo">Tokyo (JST)</option>
-                  <option value="Asia/Shanghai">Beijing (CST)</option>
-                  <option value="Asia/Karachi">Islamabad (PKT)</option>
-                  <option value="Australia/Sydney">Sydney (AEDT/AEST)</option>
-                </optgroup>
-              </select>
+            {/* Timezone Selection for Guided Mode */}
+            <div className="space-y-3">
+              <div className="flex items-center space-x-3">
+                <input
+                  type="checkbox"
+                  id="autoDetectGuided"
+                  checked={useAutoDetection}
+                  onChange={(e) => setUseAutoDetection(e.target.checked)}
+                  className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
+                />
+                <label htmlFor="autoDetectGuided" className="text-sm font-medium text-gray-700">
+                  <MapPin className="w-4 h-4 inline mr-1" />
+                  Auto-detect my timezone
+                </label>
+              </div>
+              
+              {!useAutoDetection && (
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    <Globe className="w-4 h-4 inline mr-1" />
+                    Select Timezone
+                  </label>
+                  <select
+                    value={selectedTimezone}
+                    onChange={(e) => setSelectedTimezone(e.target.value)}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  >
+                    <optgroup label="Common Timezones">
+                      <option value="America/New_York">Eastern Time (ET)</option>
+                      <option value="America/Chicago">Central Time (CT)</option>
+                      <option value="America/Denver">Mountain Time (MT)</option>
+                      <option value="America/Los_Angeles">Pacific Time (PT)</option>
+                      <option value="Europe/London">London (GMT/BST)</option>
+                      <option value="Europe/Paris">Paris (CET/CEST)</option>
+                      <option value="Asia/Tokyo">Tokyo (JST)</option>
+                      <option value="Asia/Shanghai">Beijing (CST)</option>
+                      <option value="Asia/Karachi">Islamabad (PKT)</option>
+                      <option value="Australia/Sydney">Sydney (AEDT/AEST)</option>
+                    </optgroup>
+                  </select>
+                </div>
+              )}
             </div>
 
             <Button

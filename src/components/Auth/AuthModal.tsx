@@ -75,7 +75,6 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, mode: ini
               value={fullName}
               onChange={(e) => setFullName(e.target.value)}
               required
-              className="pl-10"
             />
           )}
           
@@ -85,7 +84,6 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, mode: ini
             value={email}
             onChange={(e) => setEmail(e.target.value)}
             required
-            className="pl-10"
           />
           
           <Input
@@ -94,7 +92,6 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, mode: ini
             value={password}
             onChange={(e) => setPassword(e.target.value)}
             required
-            className="pl-10"
           />
 
           {error && (
