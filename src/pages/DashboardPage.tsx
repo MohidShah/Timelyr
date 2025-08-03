@@ -149,6 +149,7 @@ export const DashboardPage: React.FC = () => {
       handleCopyLink(link);
     }
   };
+
   const filteredLinks = links.filter(link =>
     link.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
     link.description?.toLowerCase().includes(searchQuery.toLowerCase())
@@ -372,84 +373,6 @@ export const DashboardPage: React.FC = () => {
                   <button
                     onClick={() => setShowCreateModal(false)}
                     className="text-gray-400 hover:text-gray-600 transition-colors text-2xl"
-                  >
-                    ×
-                  </button>
-                </div>
-                <TimeInput onTimeSelect={handleCreateLink} />
-              </div>
-            </div>
-          </div>
-        )}
-      </div>
-    </div>
-  );
-};
-                        {link.description && (
-                          <p className="text-sm text-gray-600">{link.description}</p>
-                        )}
-                      </div>
-                      <div className={`w-3 h-3 rounded-full ${
-                        isBusinessHours ? 'bg-green-400' : 'bg-red-400'
-                      }`} title={isBusinessHours ? 'Business Hours' : 'Outside Business Hours'} />
-                    </div>
-                  </CardHeader>
-                  <CardContent className="pt-0">
-                    <div className="space-y-3">
-                      <div>
-                        <p className="text-sm text-gray-500 mb-1">Scheduled Time</p>
-                        <p className="font-medium text-gray-800">
-                          {format(scheduledTime, 'MMM d, yyyy \'at\' h:mm a')}
-                        </p>
-                      </div>
-                      
-                      <div className="flex items-center justify-between text-sm text-gray-500">
-                        <span>{link.view_count} views</span>
-                        <span>{format(new Date(link.created_at), 'MMM d')}</span>
-                      </div>
-
-                      <div className="flex space-x-2">
-                        <Button
-                          size="sm"
-                          variant="secondary"
-                          onClick={() => handleCopyLink(link)}
-                          className="flex-1"
-                        >
-                          <Copy className="w-3 h-3 mr-1" />
-                          {copiedId === link.id ? 'Copied!' : 'Copy'}
-                        </Button>
-                        <Link to={`/link/${link.slug}`}>
-                          <Button size="sm" variant="tertiary">
-                            <ExternalLink className="w-3 h-3" />
-                          </Button>
-                        </Link>
-                        <Button
-                          size="sm"
-                          variant="tertiary"
-                          onClick={() => handleDeleteLink(link.id)}
-                          className="text-red-600 hover:text-red-700"
-                        >
-                          <Trash2 className="w-3 h-3" />
-                        </Button>
-                      </div>
-                    </div>
-                  </CardContent>
-                </Card>
-              );
-            })}
-          </div>
-        )}
-
-        {/* Create Link Modal */}
-        {showCreateModal && (
-          <div className="fixed inset-0 bg-black bg-opacity-50 backdrop-blur-sm flex items-center justify-center p-4 z-50">
-            <div className="bg-white rounded-xl shadow-xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
-              <div className="p-6">
-                <div className="flex justify-between items-center mb-6">
-                  <h2 className="text-2xl font-bold text-gray-800">Create New Link</h2>
-                  <button
-                    onClick={() => setShowCreateModal(false)}
-                    className="text-gray-400 hover:text-gray-600 transition-colors"
                   >
                     ×
                   </button>
