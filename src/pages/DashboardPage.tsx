@@ -1,12 +1,14 @@
 import React, { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { Plus, Search, Grid, List, Calendar, Copy, Trash2, Edit, ExternalLink, BarChart3, Share2 } from 'lucide-react';
+import { Plus, Search, Grid, List, Calendar, Copy, Trash2, Edit, ExternalLink, BarChart3, Share2, Clock } from 'lucide-react';
 import { format } from 'date-fns';
 import { Button } from '../components/ui/Button';
 import { Input } from '../components/ui/Input';
 import { Card, CardContent, CardHeader } from '../components/ui/Card';
 import { TimeInput } from '../components/TimeInput';
 import { BusinessHoursIndicator } from '../components/BusinessHoursIndicator';
+import { ConfirmDialog } from '../components/ui/ConfirmDialog';
+import { Modal } from '../components/ui/Modal';
 import { supabase } from '../lib/supabase';
 import { formatInTimezone, getUserTimezone, generateSlug } from '../lib/timezone';
 import type { Database } from '../lib/supabase';
@@ -21,13 +23,33 @@ export const DashboardPage: React.FC = () => {
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [selectedLink, setSelectedLink] = useState<TimezoneLink | null>(null);
   const [copiedId, setCopiedId] = useState<string | null>(null);
-  const [editingLink, setEditingLink] = useState<TimezoneLink | null>(null);
+  const [showDeleteDialog, setShowDeleteDialog] = useState<string | null>(null);
+  const [showEditModal, setShowEditModal] = useState<TimezoneLink | null>(null);
+  const [userProfile, setUserProfile] = useState<any>(null);
   const navigate = useNavigate();
 
   useEffect(() => {
     fetchLinks();
+    fetchUserProfile();
   }, []);
 
+  const fetchUserProfile = async () => {
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return;
+
+      const { data, error } = await supabase
+        .from('profiles')
+        .select('*')
+        .eq('id', user.id)
+        .single();
+
+      if (error && error.code !== 'PGRST116') throw error;
+      setUserProfile(data);
+    } catch (error) {
+      console.error('Error fetching profile:', error);
+    }
+  };
   const fetchLinks = async () => {
     try {
       const { data: { user } } = await supabase.auth.getUser();
@@ -51,10 +73,16 @@ export const DashboardPage: React.FC = () => {
     }
   };
 
-  const handleCreateLink = async (date: Date, timezone: string, title: string) => {
+  const handleCreateLink = async (date: Date, timezone: string, title: string, description?: string) => {
     try {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) return;
+
+      // Check plan limits
+      if (userProfile?.plan === 'starter' && userProfile?.links_created_this_month >= 50) {
+        alert('You have reached your monthly limit of 50 links. Please upgrade to Pro for unlimited links.');
+        return;
+      }
 
       const slug = generateSlug(title, date);
       
@@ -62,6 +90,7 @@ export const DashboardPage: React.FC = () => {
         .from('timezone_links')
         .insert({
           title,
+          description: description || null,
           scheduled_time: date.toISOString(),
           timezone,
           slug,
@@ -72,6 +101,15 @@ export const DashboardPage: React.FC = () => {
         .single();
 
       if (error) throw error;
+
+      // Update monthly link count
+      if (userProfile) {
+        await supabase
+          .from('profiles')
+          .update({ links_created_this_month: userProfile.links_created_this_month + 1 })
+          .eq('id', user.id);
+        setUserProfile({ ...userProfile, links_created_this_month: userProfile.links_created_this_month + 1 });
+      }
 
       setLinks([data, ...links]);
       setShowCreateModal(false);
@@ -92,9 +130,6 @@ export const DashboardPage: React.FC = () => {
   };
 
   const handleDeleteLink = async (linkId: string) => {
-    const confirmed = window.confirm('Are you sure you want to delete this link? This action cannot be undone.');
-    if (!confirmed) return;
-
     try {
       const { error } = await supabase
         .from('timezone_links')
@@ -103,20 +138,25 @@ export const DashboardPage: React.FC = () => {
 
       if (error) throw error;
       setLinks(links.filter(link => link.id !== linkId));
+      setShowDeleteDialog(null);
     } catch (error) {
       console.error('Error deleting link:', error);
     }
   };
 
-  const handleEditLink = async (linkId: string, newTitle: string, newDescription?: string) => {
+  const handleEditLink = async (date: Date, timezone: string, title: string, description?: string) => {
+    if (!showEditModal) return;
+
     try {
       const { error } = await supabase
         .from('timezone_links')
         .update({
-          title: newTitle,
-          description: newDescription || null,
+          title,
+          description: description || null,
+          scheduled_time: date.toISOString(),
+          timezone,
         })
-        .eq('id', linkId);
+        .eq('id', showEditModal.id);
 
       if (error) throw error;
       
@@ -124,8 +164,8 @@ export const DashboardPage: React.FC = () => {
         link.id === linkId 
           ? { ...link, title: newTitle, description: newDescription || null }
           : link
-      ));
-      setEditingLink(null);
+        link.id === showEditModal.id
+      setShowEditModal(null);
     } catch (error) {
       console.error('Error updating link:', error);
     }
@@ -177,7 +217,14 @@ export const DashboardPage: React.FC = () => {
         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-8">
           <div>
             <h1 className="text-3xl font-bold text-gray-900 mb-2">My Timezone Links</h1>
-            <p className="text-gray-600">Manage and track your shared meeting times</p>
+            <div className="flex items-center space-x-4">
+              <p className="text-gray-600">Manage and track your shared meeting times</p>
+              {userProfile?.plan === 'starter' && (
+                <span className="text-sm bg-blue-100 text-blue-800 px-2 py-1 rounded-full">
+                  {userProfile.links_created_this_month}/50 links used
+                </span>
+              )}
+            </div>
           </div>
           <Button onClick={() => setShowCreateModal(true)} size="lg">
             <Plus className="w-4 h-4 mr-2" />
@@ -188,7 +235,7 @@ export const DashboardPage: React.FC = () => {
         {/* Controls */}
         <div className="flex flex-col sm:flex-row gap-4 mb-8">
           <div className="flex-1 relative">
-            <Search className="w-4 h-4 absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" />
+            <Search className="w-4 h-4 absolute left-3 top-3 text-gray-400" />
             <Input
               placeholder="Search links..."
               value={searchQuery}
@@ -246,97 +293,133 @@ export const DashboardPage: React.FC = () => {
                   <CardHeader className="pb-4">
                     <div className="flex items-start justify-between">
                       <div className="flex-1">
-                        {editingLink?.id === link.id ? (
-                          <div className="space-y-2">
-                            <Input
-                              value={editingLink.title}
-                              onChange={(e) => setEditingLink({ ...editingLink, title: e.target.value })}
-                              className="text-sm"
-                            />
-                            <Input
-                              value={editingLink.description || ''}
-                              onChange={(e) => setEditingLink({ ...editingLink, description: e.target.value })}
-                              placeholder="Description (optional)"
-                              className="text-sm"
-                            />
-                            <div className="flex space-x-2">
-                              <Button
-                                size="sm"
-                                onClick={() => handleEditLink(editingLink.id, editingLink.title, editingLink.description)}
-                              >
-                                Save
-                              </Button>
-                              <Button
-                                size="sm"
-                                variant="tertiary"
-                                onClick={() => setEditingLink(null)}
-                              >
-                                Cancel
-                              </Button>
-                            </div>
-                          </div>
-                        ) : (
-                          <>
-                            <h3 className="font-semibold text-gray-800 mb-1 text-lg">{link.title}</h3>
-                            {link.description && (
-                              <p className="text-sm text-gray-600">{link.description}</p>
-                            )}
-                          </>
+                        <h3 className="font-semibold text-gray-800 mb-1 text-lg">{link.title}</h3>
+                        {link.description && (
+                          <p className="text-sm text-gray-600">{link.description}</p>
                         )}
                       </div>
-                      {editingLink?.id !== link.id && (
-                        <div className={`w-3 h-3 rounded-full ${
-                          isBusinessHours ? 'bg-green-400' : 'bg-red-400'
-                        }`} title={isBusinessHours ? 'Business Hours' : 'Outside Business Hours'} />
-                      )}
+                      <div className={`w-3 h-3 rounded-full ${
+                        isBusinessHours ? 'bg-green-400' : 'bg-red-400'
+                      }`} title={isBusinessHours ? 'Business Hours' : 'Outside Business Hours'} />
                     </div>
                   </CardHeader>
                   <CardContent className="pt-0">
-                    {editingLink?.id !== link.id && (
-                      <div className="space-y-4">
-                        <div className="bg-blue-50 rounded-lg p-3">
-                          <p className="text-sm text-blue-600 font-medium mb-1">Your Local Time</p>
-                          <p className="font-semibold text-blue-800">
-                            {format(scheduledTime, 'MMM d, yyyy \'at\' h:mm a')}
-                          </p>
-                        </div>
-                        
-                        <div className="flex items-center justify-between text-sm text-gray-500">
-                          <span className="flex items-center">
-                            <BarChart3 className="w-3 h-3 mr-1" />
-                            {link.view_count} views
-                          </span>
-                          <span>{format(new Date(link.created_at), 'MMM d')}</span>
-                        </div>
+                    <div className="space-y-4">
+                      <div className="bg-blue-50 rounded-lg p-3">
+                        <p className="text-sm text-blue-600 font-medium mb-1">Your Local Time</p>
+                        <p className="font-semibold text-blue-800">
+                          {format(scheduledTime, 'MMM d, yyyy \'at\' h:mm a')}
+                        </p>
+                      </div>
+                      
+                      <div className="flex items-center justify-between text-sm text-gray-500">
+                        <span className="flex items-center">
+                          <BarChart3 className="w-3 h-3 mr-1" />
+                          {link.view_count} views
+                        </span>
+                        <span>{format(new Date(link.created_at), 'MMM d')}</span>
+                      </div>
 
-                        <div className="grid grid-cols-2 gap-2">
-                          <Button
-                            size="sm"
-                            variant="secondary"
-                            onClick={() => handleCopyLink(link)}
-                            className="text-xs"
-                          >
-                            <Copy className="w-3 h-3 mr-1" />
-                            {copiedId === link.id ? 'Copied!' : 'Copy'}
-                          </Button>
-                          <Button
-                            size="sm"
-                            variant="secondary"
-                            onClick={() => handleShareLink(link)}
-                            className="text-xs"
-                          >
-                            <Share2 className="w-3 h-3 mr-1" />
-                            Share
-                          </Button>
-                        </div>
+                      <div className="grid grid-cols-2 gap-2">
+                        <Button
+                          size="sm"
+                          variant="secondary"
+                          onClick={() => handleCopyLink(link)}
+                          className="text-xs"
+                        >
+                          <Copy className="w-3 h-3 mr-1" />
+                          {copiedId === link.id ? 'Copied!' : 'Copy'}
+                        </Button>
+                        <Button
+                          size="sm"
+                          variant="secondary"
+                          onClick={() => handleShareLink(link)}
+                          className="text-xs"
+                        >
+                          <Share2 className="w-3 h-3 mr-1" />
+                          Share
+                        </Button>
+                      </div>
 
-                        <div className="flex space-x-2">
-                          <Link to={`/link/${link.slug}`} className="flex-1">
-                            <Button size="sm" variant="tertiary" className="w-full text-xs">
-                              <ExternalLink className="w-3 h-3 mr-1" />
-                              View
-                            </Button>
-                          </Link>
+                      <div className="flex space-x-2">
+                        <Link to={`/link/${link.slug}`} className="flex-1">
+                          <Button size="sm" variant="tertiary" className="w-full text-xs">
+                            <ExternalLink className="w-3 h-3 mr-1" />
+                            View
+                          </Button>
+                        </Link>
+                        <Button
+                          size="sm"
+                          variant="tertiary"
+                          onClick={() => setShowEditModal(link)}
+                          className="text-xs"
+                        >
+                          <Edit className="w-3 h-3" />
+                        </Button>
+                        <Button
+                          size="sm"
+                          variant="tertiary"
+                          onClick={() => setShowDeleteDialog(link.id)}
+                          className="text-red-600 hover:text-red-700 text-xs"
+                        >
+                          <Trash2 className="w-3 h-3" />
+                        </Button>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+              );
+            })}
+          </div>
+        )}
+
+        {/* Create Link Modal */}
+        {showCreateModal && (
+          <Modal
+            isOpen={showCreateModal}
+            onClose={() => setShowCreateModal(false)}
+            title="Create New Link"
+            maxWidth="xl"
+          >
+            <TimeInput onTimeSelect={handleCreateLink} />
+          </Modal>
+        )}
+
+        {/* Edit Link Modal */}
+        {showEditModal && (
+          <Modal
+            isOpen={!!showEditModal}
+            onClose={() => setShowEditModal(null)}
+            title="Edit Link"
+            maxWidth="xl"
+          >
+            <TimeInput 
+              onTimeSelect={handleEditLink}
+              initialData={{
+                title: showEditModal.title,
+                description: showEditModal.description || undefined,
+                date: new Date(showEditModal.scheduled_time),
+                timezone: showEditModal.timezone
+              }}
+            />
+          </Modal>
+        )}
+
+        {/* Delete Confirmation Dialog */}
+        <ConfirmDialog
+          isOpen={!!showDeleteDialog}
+          onClose={() => setShowDeleteDialog(null)}
+          onConfirm={() => showDeleteDialog && handleDeleteLink(showDeleteDialog)}
+          title="Delete Link"
+          message="Are you sure you want to delete this link? This action cannot be undone and the link will no longer be accessible."
+          confirmText="Yes, Delete"
+          cancelText="Cancel"
+          variant="danger"
+        />
+      </div>
+    </div>
+  );
+};
                           <Button
                             size="sm"
                             variant="tertiary"

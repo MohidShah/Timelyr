@@ -8,16 +8,30 @@ import { Clock, Calendar, Globe, MapPin } from 'lucide-react';
 
 interface TimeInputProps {
   onTimeSelect: (date: Date, timezone: string, title: string) => void;
+  onTimeSelect: (date: Date, timezone: string, title: string, description?: string) => void;
+  initialData?: {
+    title: string;
+    description?: string;
+    date: Date;
+    timezone: string;
+  };
 }
 
-export const TimeInput: React.FC<TimeInputProps> = ({ onTimeSelect }) => {
+export const TimeInput: React.FC<TimeInputProps> = ({ onTimeSelect, initialData }) => {
   const [mode, setMode] = useState<'natural' | 'guided'>('natural');
   const [naturalInput, setNaturalInput] = useState('');
-  const [title, setTitle] = useState('');
+  const [title, setTitle] = useState(initialData?.title || '');
+  const [description, setDescription] = useState(initialData?.description || '');
   const [parsedTime, setParsedTime] = useState<Date | null>(null);
-  const [selectedDate, setSelectedDate] = useState(format(new Date(), 'yyyy-MM-dd'));
-  const [selectedTime, setSelectedTime] = useState('14:00');
-  const [selectedTimezone, setSelectedTimezone] = useState(getUserTimezone());
+  const [selectedDate, setSelectedDate] = useState(
+    initialData ? format(initialData.date, 'yyyy-MM-dd') : format(new Date(), 'yyyy-MM-dd')
+  );
+  const [selectedTime, setSelectedTime] = useState(
+    initialData ? format(initialData.date, 'HH:mm') : '14:00'
+  );
+  const [selectedTimezone, setSelectedTimezone] = useState(
+    initialData?.timezone || getUserTimezone()
+  );
   const [useAutoDetection, setUseAutoDetection] = useState(true);
 
   useEffect(() => {
@@ -31,7 +45,7 @@ export const TimeInput: React.FC<TimeInputProps> = ({ onTimeSelect }) => {
 
   const handleNaturalSubmit = () => {
     if (parsedTime && title) {
-      onTimeSelect(parsedTime, useAutoDetection ? getUserTimezone() : selectedTimezone, title);
+      onTimeSelect(parsedTime, useAutoDetection ? getUserTimezone() : selectedTimezone, title, description);
     }
   };
 
@@ -40,7 +54,7 @@ export const TimeInput: React.FC<TimeInputProps> = ({ onTimeSelect }) => {
       const [hours, minutes] = selectedTime.split(':').map(Number);
       const date = new Date(selectedDate);
       const finalDate = setHours(setMinutes(date, minutes), hours);
-      onTimeSelect(finalDate, useAutoDetection ? getUserTimezone() : selectedTimezone, title);
+      onTimeSelect(finalDate, useAutoDetection ? getUserTimezone() : selectedTimezone, title, description);
     }
   };
 
@@ -88,6 +102,18 @@ export const TimeInput: React.FC<TimeInputProps> = ({ onTimeSelect }) => {
           onChange={(e) => setTitle(e.target.value)}
         />
 
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-1">
+            Description (Optional)
+          </label>
+          <textarea
+            value={description}
+            onChange={(e) => setDescription(e.target.value)}
+            placeholder="Add more details about your meeting..."
+            rows={3}
+            className="w-full px-3 py-2 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200"
+          />
+        </div>
         {mode === 'natural' ? (
           <div className="space-y-4">
             <Input

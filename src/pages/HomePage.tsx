@@ -12,7 +12,7 @@ export const HomePage: React.FC = () => {
   const [showTimeInput, setShowTimeInput] = useState(false);
   const navigate = useNavigate();
 
-  const handleTimeSelect = async (date: Date, timezone: string, title: string) => {
+  const handleTimeSelect = async (date: Date, timezone: string, title: string, description?: string) => {
     try {
       const slug = generateSlug(title, date);
       
@@ -23,6 +23,7 @@ export const HomePage: React.FC = () => {
         .from('timezone_links')
         .insert({
           title,
+          description: description || null,
           scheduled_time: date.toISOString(),
           timezone,
           slug,

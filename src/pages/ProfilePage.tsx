@@ -226,22 +226,50 @@ export const ProfilePage: React.FC = () => {
                 <h2 className="text-lg font-semibold text-gray-800">Current Plan</h2>
               </CardHeader>
               <CardContent>
-                <div className="flex items-center justify-between">
+                <div className="space-y-4">
                   <div>
                     <h3 className="font-medium text-gray-800 capitalize">
                       {profile?.plan} Plan
                     </h3>
-                    <p className="text-sm text-gray-600">
+                    <p className="text-sm text-gray-600 mb-2">
                       {profile?.plan === 'starter' 
                         ? `${profile.links_created_this_month}/50 links used this month`
                         : 'Unlimited links'
                       }
                     </p>
+                    {profile?.plan === 'starter' && (
+                      <div className="bg-blue-50 p-4 rounded-lg">
+                        <h4 className="font-medium text-blue-800 mb-2">Starter Plan Limits</h4>
+                        <ul className="text-sm text-blue-700 space-y-1">
+                          <li>• 50 links per month</li>
+                          <li>• 30-day link expiration</li>
+                          <li>• Basic analytics</li>
+                          <li>• Community support</li>
+                        </ul>
+                      </div>
+                    )}
+                    {profile?.plan === 'pro' && (
+                      <div className="bg-purple-50 p-4 rounded-lg">
+                        <h4 className="font-medium text-purple-800 mb-2">Pro Plan Benefits</h4>
+                        <ul className="text-sm text-purple-700 space-y-1">
+                          <li>• Unlimited links</li>
+                          <li>• 1-year link expiration</li>
+                          <li>• Advanced analytics</li>
+                          <li>• Priority support</li>
+                          <li>• Custom branding</li>
+                        </ul>
+                      </div>
+                    )}
                   </div>
                   {profile?.plan === 'starter' && (
-                    <Button variant="secondary">
-                      Upgrade to Pro
-                    </Button>
+                    <div className="flex space-x-3">
+                      <Button variant="primary">
+                        Upgrade to Pro
+                      </Button>
+                      <Button variant="tertiary">
+                        Compare Plans
+                      </Button>
+                    </div>
                   )}
                 </div>
               </CardContent>

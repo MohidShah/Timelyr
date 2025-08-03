@@ -51,7 +51,7 @@ export const Footer: React.FC = () => {
               </li>
               <li>
                 <a href="#" className="text-gray-600 hover:text-gray-800 transition-colors">
-                  API Documentation
+                  Help Center
                 </a>
               </li>
             </ul>
@@ -73,12 +73,7 @@ export const Footer: React.FC = () => {
               </li>
               <li>
                 <a href="#" className="text-gray-600 hover:text-gray-800 transition-colors">
-                  Careers
-                </a>
-              </li>
-              <li>
-                <a href="#" className="text-gray-600 hover:text-gray-800 transition-colors">
-                  Press Kit
+                  Blog
                 </a>
               </li>
             </ul>

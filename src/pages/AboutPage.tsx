@@ -5,22 +5,22 @@ import { Card, CardContent } from '../components/ui/Card';
 export const AboutPage: React.FC = () => {
   const team = [
     {
-      name: 'Alex Chen',
-      role: 'Founder & CEO',
-      bio: 'Former Google engineer who got tired of timezone confusion in global teams.',
-      avatar: '👨‍💻',
+      name: 'Sarah Johnson',
+      role: 'Product Designer',
+      bio: 'UX expert passionate about creating intuitive experiences for global teams.',
+      avatar: '🎨',
     },
     {
-      name: 'Sarah Kim',
-      role: 'Head of Product',
-      bio: 'Design leader passionate about solving real problems with elegant solutions.',
-      avatar: '👩‍🎨',
+      name: 'Michael Chen',
+      role: 'Full Stack Developer',
+      bio: 'Backend specialist focused on scalable timezone conversion algorithms.',
+      avatar: '⚡',
     },
     {
-      name: 'Marcus Johnson',
-      role: 'Lead Developer',
-      bio: 'Full-stack engineer obsessed with performance and user experience.',
-      avatar: '👨‍🚀',
+      name: 'Emily Rodriguez',
+      role: 'Growth Marketing',
+      bio: 'Data-driven marketer helping teams worldwide discover better collaboration.',
+      avatar: '📈',
     },
   ];
 
