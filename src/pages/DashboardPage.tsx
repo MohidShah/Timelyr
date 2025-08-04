@@ -1,7 +1,7 @@
 import React from 'react';
 import { User, Clock, Settings, BarChart3 } from 'lucide-react';
 
-const DashboardPage: React.FC = () => {
+export const DashboardPage: React.FC = () => {
   return (
     <div className="min-h-screen bg-gray-50 py-8">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -64,5 +64,3 @@ const DashboardPage: React.FC = () => {
     </div>
   );
 };
-
-export default DashboardPage;
