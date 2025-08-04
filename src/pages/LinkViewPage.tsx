@@ -4,12 +4,11 @@ import { Calendar, Clock, Copy, ExternalLink, Plus, ArrowLeft, Share2 } from 'lu
 import { format } from 'date-fns';
 import { formatInTimezone, getUserTimezone } from '../lib/timezone';
 import { BusinessHoursIndicator } from '../components/BusinessHoursIndicator';
+import { trackLinkView } from '../lib/analytics';
 import { Button } from '../components/ui/Button';
 import { Card, CardContent, CardHeader } from '../components/ui/Card';
 import { supabase } from '../lib/supabase';
-import type { Database } from '../lib/supabase';
-
-type TimezoneLink = Database['public']['Tables']['timezone_links']['Row'];
+import type { TimezoneLink } from '../lib/supabase';
 
 export const LinkViewPage: React.FC = () => {
   const { slug } = useParams<{ slug: string }>();
@@ -34,11 +33,12 @@ export const LinkViewPage: React.FC = () => {
         if (error) throw error;
         setLink(data);
 
-        // Increment view count
-        await supabase
-          .from('timezone_links')
-          .update({ view_count: data.view_count + 1 })
-          .eq('id', data.id);
+        // Track the view with analytics
+        await trackLinkView(data.id, {
+          timezone: getUserTimezone(),
+          userAgent: navigator.userAgent,
+          referrer: document.referrer,
+        });
       } catch (error) {
         console.error('Error fetching link:', error);
       } finally {

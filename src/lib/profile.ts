@@ -1,0 +1,212 @@
+import { supabase } from './supabase';
+import type { UserProfile, NotificationPreferences } from './supabase';
+
+// Create user profile
+export const createUserProfile = async (userId: string, profileData: {
+  email: string;
+  display_name: string;
+  username?: string;
+}): Promise<UserProfile> => {
+  const { data, error } = await supabase
+    .from('user_profiles')
+    .insert({
+      id: userId,
+      email: profileData.email,
+      display_name: profileData.display_name,
+      username: profileData.username || null,
+    })
+    .select()
+    .single();
+
+  if (error) throw error;
+  return data;
+};
+
+// Get user profile
+export const getUserProfile = async (userId: string): Promise<UserProfile | null> => {
+  const { data, error } = await supabase
+    .from('user_profiles')
+    .select('*')
+    .eq('id', userId)
+    .single();
+
+  if (error && error.code !== 'PGRST116') {
+    throw error;
+  }
+
+  return data;
+};
+
+// Update user profile
+export const updateUserProfile = async (userId: string, updates: Partial<UserProfile>): Promise<UserProfile> => {
+  const { data, error } = await supabase
+    .from('user_profiles')
+    .update(updates)
+    .eq('id', userId)
+    .select()
+    .single();
+
+  if (error) throw error;
+  return data;
+};
+
+// Check username availability
+export const checkUsernameAvailability = async (username: string, currentUserId?: string) => {
+  // Validate format
+  const usernameRegex = /^[a-zA-Z0-9_-]{3,50}$/;
+  if (!usernameRegex.test(username)) {
+    return { 
+      available: false, 
+      error: 'Username must be 3-50 characters and contain only letters, numbers, underscores, and hyphens' 
+    };
+  }
+
+  // Check availability
+  let query = supabase
+    .from('user_profiles')
+    .select('id')
+    .eq('username', username.toLowerCase());
+
+  if (currentUserId) {
+    query = query.neq('id', currentUserId);
+  }
+
+  const { data, error } = await query.single();
+
+  if (error && error.code !== 'PGRST116') {
+    throw error;
+  }
+
+  return { 
+    available: !data, 
+    error: data ? 'Username is already taken' : null 
+  };
+};
+
+// Generate username suggestions
+export const generateUsernameSuggestions = async (displayName: string): Promise<string[]> => {
+  const baseUsername = displayName
+    .toLowerCase()
+    .replace(/[^a-z0-9]/g, '-')
+    .replace(/-+/g, '-')
+    .replace(/^-|-$/g, '')
+    .substring(0, 30);
+
+  const suggestions = [baseUsername];
+
+  // Add numbered variations
+  for (let i = 1; i <= 5; i++) {
+    suggestions.push(`${baseUsername}${i}`);
+    suggestions.push(`${baseUsername}-${i}`);
+  }
+
+  // Add random suffix variations
+  const suffixes = ['dev', 'pro', 'user', 'time', 'zone'];
+  suffixes.forEach(suffix => {
+    suggestions.push(`${baseUsername}-${suffix}`);
+  });
+
+  // Check availability for each suggestion
+  const availableSuggestions = [];
+  for (const suggestion of suggestions) {
+    const { available } = await checkUsernameAvailability(suggestion);
+    if (available) {
+      availableSuggestions.push(suggestion);
+    }
+    if (availableSuggestions.length >= 5) break;
+  }
+
+  return availableSuggestions;
+};
+
+// Upload avatar
+export const uploadAvatar = async (userId: string, file: File): Promise<string> => {
+  const fileExt = file.name.split('.').pop();
+  const fileName = `${userId}/avatar.${fileExt}`;
+
+  // Upload to Supabase Storage
+  const { data, error } = await supabase.storage
+    .from('avatars')
+    .upload(fileName, file, { upsert: true });
+
+  if (error) throw error;
+
+  // Get public URL
+  const { data: urlData } = supabase.storage
+    .from('avatars')
+    .getPublicUrl(fileName);
+
+  // Update profile with new avatar URL
+  await updateUserProfile(userId, { avatar_url: urlData.publicUrl });
+
+  return urlData.publicUrl;
+};
+
+// Get notification preferences
+export const getNotificationPreferences = async (userId: string): Promise<NotificationPreferences | null> => {
+  const { data, error } = await supabase
+    .from('notification_preferences')
+    .select('*')
+    .eq('user_id', userId)
+    .single();
+
+  if (error && error.code !== 'PGRST116') {
+    throw error;
+  }
+
+  return data;
+};
+
+// Update notification preferences
+export const updateNotificationPreferences = async (
+  userId: string, 
+  preferences: Partial<NotificationPreferences>
+): Promise<NotificationPreferences> => {
+  const { data, error } = await supabase
+    .from('notification_preferences')
+    .upsert({
+      user_id: userId,
+      ...preferences,
+    })
+    .select()
+    .single();
+
+  if (error) throw error;
+  return data;
+};
+
+// Delete user account and all associated data
+export const deleteUserAccount = async (userId: string) => {
+  // Delete in order due to foreign key constraints
+  const tables = [
+    'link_analytics',
+    'link_templates', 
+    'user_sessions',
+    'notification_preferences',
+    'timezone_links',
+    'user_profiles'
+  ];
+
+  for (const table of tables) {
+    const { error } = await supabase
+      .from(table)
+      .delete()
+      .eq(table === 'link_analytics' ? 'link_id' : 'user_id', userId);
+
+    if (error && table !== 'link_analytics') {
+      console.error(`Error deleting from ${table}:`, error);
+    }
+  }
+
+  // Delete avatar from storage
+  const { error: storageError } = await supabase.storage
+    .from('avatars')
+    .remove([`${userId}/avatar.jpg`, `${userId}/avatar.png`, `${userId}/avatar.jpeg`]);
+
+  if (storageError) {
+    console.error('Error deleting avatar:', storageError);
+  }
+
+  // Sign out the user
+  await supabase.auth.signOut();
+};
