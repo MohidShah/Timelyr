@@ -5,7 +5,7 @@ import { LinkCard } from '../components/Dashboard/LinkCard';
 import { Button } from '../components/ui/Button';
 import { Input } from '../components/ui/Input';
 import { Card, CardContent, CardHeader } from '../components/ui/Card';
-import { getUserLinks, getUserAnalytics } from '../lib/analytics';
+import { getUserAnalytics } from '../lib/analytics';
 import { supabase } from '../lib/supabase';
 import type { TimezoneLink } from '../lib/supabase';
 
@@ -33,17 +33,14 @@ export const DashboardPage: React.FC = () => {
 
       setUser(user);
       
-      // Fetch user's links
-      const userLinks = await getUserLinks(user.id);
-      setLinks(userLinks);
-
       // Fetch analytics
       const userAnalytics = await getUserAnalytics(user.id);
+      setLinks(userAnalytics.links);
       setAnalytics({
         totalViews: userAnalytics.totalViews,
         uniqueViewers: userAnalytics.uniqueViewers,
-        activeLinks: userLinks.filter(link => link.is_active).length,
-        linksCreatedThisMonth: userLinks.filter(link => {
+        activeLinks: userAnalytics.activeLinks,
+        linksCreatedThisMonth: userAnalytics.links.filter(link => {
           const created = new Date(link.created_at);
           const now = new Date();
           return created.getMonth() === now.getMonth() && created.getFullYear() === now.getFullYear();

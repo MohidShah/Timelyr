@@ -166,6 +166,7 @@ export const getUserAnalytics = async (userId: string, days: number = 30) => {
   }, {} as Record<string, number>);
 
   return {
+    links,
     totalLinks,
     activeLinks,
     totalViews,
