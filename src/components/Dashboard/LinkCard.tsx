@@ -70,6 +70,10 @@ export const LinkCard: React.FC<LinkCardProps> = ({
     }
   };
 
+  const handleDuplicate = () => {
+    onDuplicate(link);
+  };
+
   const getStatusBadge = () => {
     if (!link.is_active) {
       return <span className="px-2 py-1 text-xs font-medium bg-gray-100 text-gray-600 rounded-full">Inactive</span>;
@@ -140,7 +144,7 @@ export const LinkCard: React.FC<LinkCardProps> = ({
                     </button>
                     <button
                       onClick={() => {
-                        onDuplicate(link);
+                        handleDuplicate();
                         setShowMenu(false);
                       }}
                       className="flex items-center w-full px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"

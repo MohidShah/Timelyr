@@ -25,10 +25,8 @@ export const DashboardLayout: React.FC<DashboardLayoutProps> = ({ user, userProf
 
   const navigation = [
     { name: 'Dashboard', href: '/dashboard', icon: Home },
-    { name: 'Create Link', href: '/dashboard/create', icon: Plus },
-    { name: 'My Links', href: '/dashboard/links', icon: LinkIcon },
     { name: 'Analytics', href: '/dashboard/analytics', icon: BarChart3 },
-    { name: 'Settings', href: '/dashboard/settings', icon: Settings },
+    { name: 'Profile', href: '/profile', icon: User },
   ];
 
   const isActive = (href: string) => {

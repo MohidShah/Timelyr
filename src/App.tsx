@@ -7,6 +7,7 @@ import { HomePage } from './pages/HomePage';
 import { LinkViewPage } from './pages/LinkViewPage';
 import { DashboardPage } from './pages/DashboardPage';
 import { ProfilePage } from './pages/ProfilePage';
+import { AnalyticsPage } from './pages/AnalyticsPage';
 import { PricingPage } from './pages/PricingPage';
 import { AboutPage } from './pages/AboutPage';
 import { HowItWorksPage } from './pages/HowItWorksPage';
@@ -59,6 +60,7 @@ function App() {
             <DashboardLayout user={user} userProfile={userProfile}>
               <Routes>
                 <Route index element={<DashboardPage />} />
+                <Route path="analytics" element={<AnalyticsPage />} />
               </Routes>
             </DashboardLayout>
           ) : (
