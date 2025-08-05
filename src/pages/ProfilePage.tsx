@@ -225,8 +225,6 @@ export const ProfilePage: React.FC = () => {
         {errors[field] && (
           <p className="text-sm text-red-600">{errors[field]}</p>
         )}
-      }
-
         {field === 'username' && isEditing && usernameSuggestions.length > 0 && (
           <div className="mt-2">
             <p className="text-sm text-gray-600 mb-2">Suggestions:</p>
