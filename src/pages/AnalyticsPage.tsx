@@ -14,10 +14,13 @@ import { Card, CardContent, CardHeader } from '../components/ui/Card';
 import { Button } from '../components/ui/Button';
 import { getUserAnalytics, getLinkAnalytics } from '../lib/analytics';
 import { supabase } from '../lib/supabase';
+import { hasFeatureAccess } from '../lib/plans';
+import { PlanUpgradePrompt } from '../components/PlanUpgradePrompt';
 import { format, subDays, parseISO } from 'date-fns';
 
 export const AnalyticsPage: React.FC = () => {
   const [user, setUser] = useState<any>(null);
+  const [userProfile, setUserProfile] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [timeRange, setTimeRange] = useState<'7d' | '30d' | '90d'>('30d');
   const [analytics, setAnalytics] = useState({
@@ -42,6 +45,15 @@ export const AnalyticsPage: React.FC = () => {
       if (!user) return;
 
       setUser(user);
+      
+      // Get user profile to check plan
+      const { data: profile } = await supabase
+        .from('user_profiles')
+        .select('*')
+        .eq('id', user.id)
+        .single();
+      
+      setUserProfile(profile);
       
       const days = timeRange === '7d' ? 7 : timeRange === '30d' ? 30 : 90;
       const userAnalytics = await getUserAnalytics(user.id, days);
@@ -124,9 +136,17 @@ export const AnalyticsPage: React.FC = () => {
   }
 
   const chartData = generateViewsChart();
+  const hasAdvancedAnalytics = hasFeatureAccess(userProfile?.plan || 'starter', 'hasAdvancedAnalytics');
 
   return (
     <div className="p-6 space-y-6">
+      {!hasAdvancedAnalytics && (
+        <PlanUpgradePrompt
+          feature="Advanced Analytics"
+          description="Get detailed insights with timezone breakdowns, peak viewing hours, country analytics, and more comprehensive reporting."
+        />
+      )}
+
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
@@ -259,15 +279,20 @@ export const AnalyticsPage: React.FC = () => {
 
       <div className="grid lg:grid-cols-2 gap-6">
         {/* Top Performing Links */}
-        <Card>
+        <Card className={!hasAdvancedAnalytics ? 'opacity-60' : ''}>
           <CardHeader>
             <h2 className="text-xl font-semibold text-gray-800 flex items-center">
               <BarChart3 className="w-5 h-5 mr-2" />
               Top Performing Links
+              {!hasAdvancedAnalytics && (
+                <span className="ml-2 px-2 py-1 text-xs bg-amber-100 text-amber-700 rounded-full">
+                  Pro Only
+                </span>
+              )}
             </h2>
           </CardHeader>
           <CardContent>
-            <div className="space-y-4">
+            <div className={`space-y-4 ${!hasAdvancedAnalytics ? 'filter blur-sm' : ''}`}>
               {analytics.topLinks.length > 0 ? (
                 analytics.topLinks.map((link, index) => (
                   <div key={link.id} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
@@ -299,15 +324,20 @@ export const AnalyticsPage: React.FC = () => {
         </Card>
 
         {/* Top Timezones */}
-        <Card>
+        <Card className={!hasAdvancedAnalytics ? 'opacity-60' : ''}>
           <CardHeader>
             <h2 className="text-xl font-semibold text-gray-800 flex items-center">
               <Globe className="w-5 h-5 mr-2" />
               Top Viewer Timezones
+              {!hasAdvancedAnalytics && (
+                <span className="ml-2 px-2 py-1 text-xs bg-amber-100 text-amber-700 rounded-full">
+                  Pro Only
+                </span>
+              )}
             </h2>
           </CardHeader>
           <CardContent>
-            <div className="space-y-4">
+            <div className={`space-y-4 ${!hasAdvancedAnalytics ? 'filter blur-sm' : ''}`}>
               {analytics.topTimezones.length > 0 ? (
                 analytics.topTimezones.slice(0, 5).map((tz, index) => (
                   <div key={tz.timezone} className="flex items-center justify-between">
@@ -342,15 +372,20 @@ export const AnalyticsPage: React.FC = () => {
       </div>
 
       {/* Peak Hours */}
-      <Card>
+      <Card className={!hasAdvancedAnalytics ? 'opacity-60' : ''}>
         <CardHeader>
           <h2 className="text-xl font-semibold text-gray-800 flex items-center">
             <Clock className="w-5 h-5 mr-2" />
             Peak Viewing Hours
+            {!hasAdvancedAnalytics && (
+              <span className="ml-2 px-2 py-1 text-xs bg-amber-100 text-amber-700 rounded-full">
+                Pro Only
+              </span>
+            )}
           </h2>
         </CardHeader>
         <CardContent>
-          {analytics.peakHours.length > 0 ? (
+          {analytics.peakHours.length > 0 && hasAdvancedAnalytics ? (
             <div className="grid grid-cols-12 gap-2">
               {Array.from({ length: 24 }, (_, hour) => {
                 const hourData = analytics.peakHours.find(h => h.hour === hour);
@@ -376,8 +411,30 @@ export const AnalyticsPage: React.FC = () => {
             </div>
           ) : (
             <div className="text-center py-8">
-              <Clock className="w-12 h-12 text-gray-400 mx-auto mb-4" />
-              <p className="text-gray-500">No hourly data available</p>
+              {!hasAdvancedAnalytics ? (
+                <div className="filter blur-sm">
+                  <div className="grid grid-cols-12 gap-2">
+                    {Array.from({ length: 24 }, (_, hour) => (
+                      <div key={hour} className="text-center">
+                        <div className="h-20 flex items-end mb-2">
+                          <div
+                            className="w-full bg-blue-500 rounded-t-sm"
+                            style={{ height: `${Math.random() * 80 + 20}%` }}
+                          ></div>
+                        </div>
+                        <span className="text-xs text-gray-500">
+                          {hour.toString().padStart(2, '0')}
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              ) : (
+                <>
+                  <Clock className="w-12 h-12 text-gray-400 mx-auto mb-4" />
+                  <p className="text-gray-500">No hourly data available</p>
+                </>
+              )}
             </div>
           )}
         </CardContent>

@@ -15,9 +15,10 @@ interface TimeInputProps {
     date: Date;
     timezone: string;
   };
+  userPlan?: 'starter' | 'pro';
 }
 
-export const TimeInput: React.FC<TimeInputProps> = ({ onTimeSelect, initialData }) => {
+export const TimeInput: React.FC<TimeInputProps> = ({ onTimeSelect, initialData, userPlan = 'starter' }) => {
   const [mode, setMode] = useState<'natural' | 'guided'>('natural');
   const [naturalInput, setNaturalInput] = useState('');
   const [title, setTitle] = useState(initialData?.title || '');
@@ -33,6 +34,8 @@ export const TimeInput: React.FC<TimeInputProps> = ({ onTimeSelect, initialData 
     initialData?.timezone || getUserTimezone()
   );
   const [useAutoDetection, setUseAutoDetection] = useState(true);
+  const [showCustomSlugInput, setShowCustomSlugInput] = useState(false);
+  const [customSlug, setCustomSlug] = useState('');
 
   useEffect(() => {
     if (naturalInput) {
@@ -114,6 +117,42 @@ export const TimeInput: React.FC<TimeInputProps> = ({ onTimeSelect, initialData 
             className="w-full px-3 py-2 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200"
           />
         </div>
+
+        {/* Custom Slug for Pro Users */}
+        {userPlan === 'pro' && (
+          <div>
+            <div className="flex items-center justify-between mb-2">
+              <label className="block text-sm font-medium text-gray-700">
+                Custom URL (Optional)
+              </label>
+              <button
+                type="button"
+                onClick={() => setShowCustomSlugInput(!showCustomSlugInput)}
+                className="text-sm text-blue-600 hover:text-blue-700"
+              >
+                {showCustomSlugInput ? 'Use Auto-Generated' : 'Customize URL'}
+              </button>
+            </div>
+            {showCustomSlugInput && (
+              <div className="space-y-2">
+                <div className="flex items-center">
+                  <span className="text-sm text-gray-500 mr-2">timelyr.com/</span>
+                  <input
+                    type="text"
+                    value={customSlug}
+                    onChange={(e) => setCustomSlug(e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, '-'))}
+                    placeholder="my-awesome-meeting"
+                    className="flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  />
+                </div>
+                <p className="text-xs text-gray-500">
+                  Use letters, numbers, and hyphens only. Leave empty for auto-generated URL.
+                </p>
+              </div>
+            )}
+          </div>
+        )}
+
         {mode === 'natural' ? (
           <div className="space-y-4">
             <Input

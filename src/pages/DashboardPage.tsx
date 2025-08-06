@@ -23,6 +23,8 @@ import { TimeInput } from '../components/TimeInput';
 import { getUserAnalytics } from '../lib/analytics';
 import { supabase } from '../lib/supabase';
 import { generateSlug } from '../lib/timezone';
+import { canCreateLink, incrementLinksCreated, getDefaultExpiration } from '../lib/plans';
+import { PlanUpgradePrompt } from '../components/PlanUpgradePrompt';
 import type { TimezoneLink } from '../lib/supabase';
 
 export const DashboardPage: React.FC = () => {
@@ -33,6 +35,8 @@ export const DashboardPage: React.FC = () => {
   const [searchQuery, setSearchQuery] = useState('');
   const [filter, setFilter] = useState<'all' | 'active' | 'expired'>('all');
   const [showCreateForm, setShowCreateForm] = useState(false);
+  const [showUpgradePrompt, setShowUpgradePrompt] = useState(false);
+  const [upgradeReason, setUpgradeReason] = useState('');
   const [analytics, setAnalytics] = useState({
     totalViews: 0,
     totalUniqueViewers: 0,
@@ -86,7 +90,18 @@ export const DashboardPage: React.FC = () => {
 
   const handleCreateLink = async (date: Date, timezone: string, title: string, description?: string) => {
     try {
+      if (!user) return;
+
+      // Check if user can create more links
+      const { canCreate, reason } = await canCreateLink(user.id);
+      if (!canCreate) {
+        setUpgradeReason(reason || 'Upgrade to Pro for unlimited links');
+        setShowUpgradePrompt(true);
+        return;
+      }
+
       const slug = generateSlug(title, date);
+      const expirationDate = getDefaultExpiration(userProfile?.plan || 'starter');
       
       const { data, error } = await supabase
         .from('timezone_links')
@@ -97,12 +112,16 @@ export const DashboardPage: React.FC = () => {
           timezone,
           slug,
           is_active: true,
+          expires_at: expirationDate.toISOString(),
           user_id: user?.id,
         })
         .select()
         .single();
 
       if (error) throw error;
+
+      // Increment the user's monthly link count
+      await incrementLinksCreated(user.id);
 
       setShowCreateForm(false);
       fetchDashboardData(); // Refresh data
@@ -193,7 +212,18 @@ export const DashboardPage: React.FC = () => {
             Manage your timezone links and view analytics
           </p>
         </div>
-        <Button onClick={() => setShowCreateForm(true)}>
+        <Button 
+          onClick={async () => {
+            if (!user) return;
+            const { canCreate, reason } = await canCreateLink(user.id);
+            if (!canCreate) {
+              setUpgradeReason(reason || 'Upgrade to Pro for unlimited links');
+              setShowUpgradePrompt(true);
+            } else {
+              setShowCreateForm(true);
+            }
+          }}
+        >
           <Plus className="w-4 h-4 mr-2" />
           Create Link
         </Button>
@@ -231,6 +261,15 @@ export const DashboardPage: React.FC = () => {
             </div>
           </CardContent>
         </Card>
+      )}
+
+      {/* Upgrade Prompt */}
+      {showUpgradePrompt && (
+        <PlanUpgradePrompt
+          feature="Unlimited Links"
+          description={upgradeReason}
+          onClose={() => setShowUpgradePrompt(false)}
+        />
       )}
 
       {/* Stats Cards */}
@@ -312,7 +351,10 @@ export const DashboardPage: React.FC = () => {
             </div>
           </CardHeader>
           <CardContent>
-            <TimeInput onTimeSelect={handleCreateLink} />
+            <TimeInput 
+              onTimeSelect={handleCreateLink} 
+              userPlan={userProfile?.plan as 'starter' | 'pro' || 'starter'}
+            />
           </CardContent>
         </Card>
       )}
@@ -397,6 +439,7 @@ export const DashboardPage: React.FC = () => {
             <LinkCard
               key={link.id}
               link={link}
+              userPlan={userProfile?.plan as 'starter' | 'pro' || 'starter'}
               onEdit={handleEditLink}
               onDelete={handleDeleteLink}
               onDuplicate={handleDuplicateLink}

@@ -4,7 +4,10 @@ import { Calendar, Clock, Copy, ExternalLink, Plus, ArrowLeft, Share2 } from 'lu
 import { format } from 'date-fns';
 import { formatInTimezone, getUserTimezone } from '../lib/timezone';
 import { BusinessHoursIndicator } from '../components/BusinessHoursIndicator';
+import { QRCodeGenerator } from '../components/QRCodeGenerator';
+import { PlanUpgradePrompt } from '../components/PlanUpgradePrompt';
 import { trackLinkView } from '../lib/analytics';
+import { hasFeatureAccess } from '../lib/plans';
 import { Button } from '../components/ui/Button';
 import { Card, CardContent, CardHeader } from '../components/ui/Card';
 import { supabase } from '../lib/supabase';
@@ -13,6 +16,7 @@ import type { TimezoneLink } from '../lib/supabase';
 export const LinkViewPage: React.FC = () => {
   const { slug } = useParams<{ slug: string }>();
   const [link, setLink] = useState<TimezoneLink | null>(null);
+  const [linkOwner, setLinkOwner] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [copied, setCopied] = useState(false);
   const [timeRemaining, setTimeRemaining] = useState('');
@@ -32,6 +36,16 @@ export const LinkViewPage: React.FC = () => {
 
         if (error) throw error;
         setLink(data);
+
+        // Get link owner's profile to check plan
+        if (data.user_id) {
+          const { data: ownerProfile } = await supabase
+            .from('user_profiles')
+            .select('plan, profile_visibility')
+            .eq('id', data.user_id)
+            .single();
+          setLinkOwner(ownerProfile);
+        }
 
         // Track the view with analytics
         await trackLinkView(data.id, {
@@ -178,6 +192,9 @@ END:VCALENDAR`;
   const eventTime = new Date(link.scheduled_time);
   const localTimeString = formatInTimezone(eventTime, userTimezone);
   const originalTimeString = formatInTimezone(eventTime, link.timezone);
+  const showQRCode = linkOwner?.plan === 'pro' || !link.user_id; // Show for pro users or anonymous links
+  const showBusinessHours = linkOwner?.plan === 'pro' || !link.user_id;
+  const showBranding = linkOwner?.plan !== 'pro';
 
   return (
     <div className="min-h-screen bg-gray-50 py-12">
@@ -256,7 +273,28 @@ END:VCALENDAR`;
         </Card>
 
         {/* Business Hours Indicator */}
-        <BusinessHoursIndicator scheduledTime={eventTime} className="mb-8" />
+        {showBusinessHours ? (
+          <BusinessHoursIndicator 
+            scheduledTime={eventTime} 
+            className="mb-8"
+            userPlan={linkOwner?.plan || 'starter'}
+          />
+        ) : (
+          <PlanUpgradePrompt
+            feature="Business Hours Intelligence"
+            description="See if your meeting time works across different regions and get suggestions for better scheduling."
+            className="mb-8"
+          />
+        )}
+
+        {/* QR Code for Pro users */}
+        {showQRCode && (
+          <QRCodeGenerator 
+            url={window.location.href}
+            title={link.title}
+            className="mb-8"
+          />
+        )}
 
         {/* Create Your Own CTA */}
         <Card className="text-center bg-gradient-to-r from-blue-600 to-purple-600 text-white">
@@ -273,6 +311,16 @@ END:VCALENDAR`;
             </Link>
           </CardContent>
         </Card>
+
+        {/* Timelyr Branding for Free Users */}
+        {showBranding && (
+          <div className="mt-8 text-center">
+            <div className="inline-flex items-center px-4 py-2 bg-gray-100 rounded-lg text-sm text-gray-600">
+              <Clock className="w-4 h-4 mr-2" />
+              Powered by <span className="font-semibold ml-1">Timelyr</span>
+            </div>
+          </div>
+        )}
 
         {/* Footer Stats */}
         <div className="mt-8 text-center text-sm text-gray-500">

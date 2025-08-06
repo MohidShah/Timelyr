@@ -6,13 +6,16 @@ import { Clock, CheckCircle, XCircle } from 'lucide-react';
 interface BusinessHoursIndicatorProps {
   scheduledTime: Date;
   className?: string;
+  userPlan?: 'starter' | 'pro';
 }
 
 export const BusinessHoursIndicator: React.FC<BusinessHoursIndicatorProps> = ({
   scheduledTime,
   className = '',
+  userPlan = 'starter',
 }) => {
   const businessHoursStatus = getBusinessHoursStatus(scheduledTime);
+  const isProFeature = userPlan !== 'pro';
 
   return (
     <Card className={`${className}`}>
@@ -20,9 +23,14 @@ export const BusinessHoursIndicator: React.FC<BusinessHoursIndicatorProps> = ({
         <h3 className="text-lg font-semibold text-gray-800 flex items-center">
           <Clock className="w-5 h-5 mr-2" />
           Business Hours Impact
+          {isProFeature && (
+            <span className="ml-2 px-2 py-1 text-xs bg-amber-100 text-amber-700 rounded-full">
+              Pro Feature
+            </span>
+          )}
         </h3>
       </CardHeader>
-      <CardContent>
+      <CardContent className={isProFeature ? 'filter blur-sm opacity-60' : ''}>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           {businessHoursStatus.map((region) => (
             <div

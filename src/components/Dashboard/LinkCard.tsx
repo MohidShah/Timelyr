@@ -14,6 +14,7 @@ import {
 } from 'lucide-react';
 import { format } from 'date-fns';
 import { formatInTimezone, getUserTimezone } from '../../lib/timezone';
+import { hasFeatureAccess } from '../../lib/plans';
 import { Button } from '../ui/Button';
 import { Card, CardContent } from '../ui/Card';
 import { ConfirmDialog } from '../ui/ConfirmDialog';
@@ -21,6 +22,7 @@ import type { TimezoneLink } from '../../lib/supabase';
 
 interface LinkCardProps {
   link: TimezoneLink;
+  userPlan?: 'starter' | 'pro';
   onEdit: (link: TimezoneLink) => void;
   onDelete: (linkId: string) => void;
   onDuplicate: (link: TimezoneLink) => void;
@@ -28,6 +30,7 @@ interface LinkCardProps {
 
 export const LinkCard: React.FC<LinkCardProps> = ({ 
   link, 
+  userPlan = 'starter',
   onEdit, 
   onDelete, 
   onDuplicate 
@@ -40,6 +43,7 @@ export const LinkCard: React.FC<LinkCardProps> = ({
   const scheduledTime = new Date(link.scheduled_time);
   const isExpired = link.expires_at && new Date(link.expires_at) < new Date();
   const isPast = scheduledTime < new Date();
+  const hasQRAccess = hasFeatureAccess(userPlan, 'hasQRCodes');
   
   const linkUrl = `${window.location.origin}/link/${link.slug}`;
   const localTimeString = formatInTimezone(scheduledTime, userTimezone);
@@ -84,7 +88,20 @@ export const LinkCard: React.FC<LinkCardProps> = ({
     if (isPast) {
       return <span className="px-2 py-1 text-xs font-medium bg-yellow-100 text-yellow-600 rounded-full">Past</span>;
     }
-    return <span className="px-2 py-1 text-xs font-medium bg-green-100 text-green-600 rounded-full">Active</span>;
+    const daysUntilExpiry = link.expires_at ? 
+      Math.ceil((new Date(link.expires_at).getTime() - new Date().getTime()) / (1000 * 60 * 60 * 24)) : 
+      null;
+    
+    return (
+      <div className="flex items-center space-x-2">
+        <span className="px-2 py-1 text-xs font-medium bg-green-100 text-green-600 rounded-full">Active</span>
+        {daysUntilExpiry && daysUntilExpiry <= 7 && (
+          <span className="px-2 py-1 text-xs font-medium bg-amber-100 text-amber-600 rounded-full">
+            {daysUntilExpiry}d left
+          </span>
+        )}
+      </div>
+    );
   };
 
   return (
@@ -110,6 +127,12 @@ export const LinkCard: React.FC<LinkCardProps> = ({
                   <Globe className="w-4 h-4 mr-1" />
                   {format(scheduledTime, 'h:mm a')}
                 </div>
+                {link.expires_at && (
+                  <div className="flex items-center text-xs">
+                    <Calendar className="w-3 h-3 mr-1" />
+                    Expires {format(new Date(link.expires_at), 'MMM d')}
+                  </div>
+                )}
               </div>
             </div>
             <div className="flex items-center space-x-2 ml-4">
@@ -197,6 +220,19 @@ export const LinkCard: React.FC<LinkCardProps> = ({
                 <Share2 className="w-4 h-4 mr-1" />
                 Share
               </Button>
+              {hasQRAccess && (
+                <Button
+                  variant="tertiary"
+                  size="sm"
+                  onClick={() => {
+                    // TODO: Show QR code modal
+                    console.log('Show QR code for:', link.slug);
+                  }}
+                >
+                  <Share2 className="w-4 h-4 mr-1" />
+                  QR
+                </Button>
+              )}
             </div>
           </div>
         </CardContent>

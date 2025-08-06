@@ -65,7 +65,7 @@ export const HomePage: React.FC = () => {
               Create Your First Link
             </Button>
           ) : (
-            <TimeInput onTimeSelect={handleTimeSelect} />
+            <TimeInput onTimeSelect={handleTimeSelect} userPlan="starter" />
           )}
         </div>
 
