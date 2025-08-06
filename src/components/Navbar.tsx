@@ -1,8 +1,9 @@
 import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
-import { Clock, User, LogOut, Settings, Plus } from 'lucide-react';
+import { Clock, User, LogOut, Settings, Plus, Bell } from 'lucide-react';
 import { Button } from './ui/Button';
 import { AuthModal } from './Auth/AuthModal';
+import { NotificationBell } from './Notifications/NotificationBell';
 import { supabase } from '../lib/supabase';
 
 interface NavbarProps {
@@ -47,7 +48,9 @@ export const Navbar: React.FC<NavbarProps> = ({ user, userProfile }) => {
 
             <div className="flex items-center space-x-4">
               {user ? (
-                <div className="relative">
+                <div className="flex items-center space-x-3">
+                  <NotificationBell userId={user.id} />
+                  <div className="relative">
                   <Button
                     variant="tertiary"
                     onClick={() => setShowUserMenu(!showUserMenu)}
@@ -87,6 +90,7 @@ export const Navbar: React.FC<NavbarProps> = ({ user, userProfile }) => {
                       </button>
                     </div>
                   )}
+                </div>
                 </div>
               ) : (
                 <div className="flex items-center space-x-2">

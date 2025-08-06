@@ -10,9 +10,14 @@ import {
   Menu,
   X,
   Crown,
-  Clock
+  Clock,
+  Bell,
+  Activity,
+  HelpCircle
 } from 'lucide-react';
 import { Button } from '../ui/Button';
+import { NotificationBell } from '../Notifications/NotificationBell';
+import { SupportWidget } from '../Support/SupportWidget';
 
 interface DashboardLayoutProps {
   user: any;
@@ -27,6 +32,7 @@ export const DashboardLayout: React.FC<DashboardLayoutProps> = ({ user, userProf
   const navigation = [
     { name: 'Dashboard', href: '/dashboard', icon: Home },
     { name: 'Analytics', href: '/dashboard/analytics', icon: BarChart3 },
+    { name: 'Activity', href: '/dashboard/activity', icon: Activity },
     { name: 'Profile', href: '/profile', icon: User },
   ];
 
@@ -165,7 +171,7 @@ export const DashboardLayout: React.FC<DashboardLayoutProps> = ({ user, userProf
               <Clock className="w-6 h-6 text-blue-600" />
               <span className="text-lg font-bold text-gray-800">Timelyr</span>
             </Link>
-            <div className="w-6" /> {/* Spacer */}
+            <NotificationBell userId={user?.id} />
           </div>
         </div>
 
@@ -173,6 +179,9 @@ export const DashboardLayout: React.FC<DashboardLayoutProps> = ({ user, userProf
         <main className="flex-1 overflow-auto">
           {children}
         </main>
+        
+        {/* Support Widget */}
+        {user && <SupportWidget userId={user.id} />}
       </div>
     </div>
   );
