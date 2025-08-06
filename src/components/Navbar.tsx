@@ -1,30 +1,19 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { Clock, User, LogOut, Settings, Plus } from 'lucide-react';
 import { Button } from './ui/Button';
 import { AuthModal } from './Auth/AuthModal';
 import { supabase } from '../lib/supabase';
-import type { User as SupabaseUser } from '@supabase/supabase-js';
 
-export const Navbar: React.FC = () => {
-  const [user, setUser] = useState<SupabaseUser | null>(null);
+interface NavbarProps {
+  user?: any;
+  userProfile?: any;
+}
+
+export const Navbar: React.FC<NavbarProps> = ({ user, userProfile }) => {
   const [showAuthModal, setShowAuthModal] = useState(false);
   const [authMode, setAuthMode] = useState<'login' | 'signup'>('login');
   const [showUserMenu, setShowUserMenu] = useState(false);
-
-  useEffect(() => {
-    supabase.auth.getUser().then(({ data: { user } }) => {
-      setUser(user);
-    });
-
-    const {
-      data: { subscription },
-    } = supabase.auth.onAuthStateChange((_event, session) => {
-      setUser(session?.user ?? null);
-    });
-
-    return () => subscription.unsubscribe();
-  }, []);
 
   const handleSignOut = async () => {
     await supabase.auth.signOut();
@@ -65,7 +54,9 @@ export const Navbar: React.FC = () => {
                     className="flex items-center space-x-2"
                   >
                     <User className="w-4 h-4" />
-                    <span className="hidden sm:inline">{user.email?.split('@')[0]}</span>
+                    <span className="hidden sm:inline">
+                      {userProfile?.display_name || user.email?.split('@')[0]}
+                    </span>
                   </Button>
 
                   {showUserMenu && (

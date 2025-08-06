@@ -66,20 +66,44 @@ export const DashboardPage: React.FC = () => {
       
       setUserProfile(profile);
       
-      // Fetch analytics and links
-      const userAnalytics = await getUserAnalytics(user.id);
-      setLinks(userAnalytics.links);
+      // Fetch user's links directly
+      const { data: userLinks, error: linksError } = await supabase
+        .from('timezone_links')
+        .select('*')
+        .eq('user_id', user.id)
+        .order('created_at', { ascending: false });
+
+      if (linksError) throw linksError;
+      
+      setLinks(userLinks || []);
+      
+      // Calculate basic analytics
+      const totalViews = userLinks?.reduce((sum, link) => sum + link.view_count, 0) || 0;
+      const totalUniqueViewers = userLinks?.reduce((sum, link) => sum + link.unique_viewers, 0) || 0;
+      const activeLinks = userLinks?.filter(link => link.is_active).length || 0;
+      const linksCreatedThisMonth = userLinks?.filter(link => {
+        const created = new Date(link.created_at);
+        const now = new Date();
+        return created.getMonth() === now.getMonth() && created.getFullYear() === now.getFullYear();
+      }).length || 0;
+      
+      const topLinks = userLinks?.sort((a, b) => b.view_count - a.view_count)
+        .slice(0, 5)
+        .map(link => ({
+          id: link.id,
+          title: link.title,
+          slug: link.slug,
+          views: link.view_count,
+          uniqueViewers: link.unique_viewers,
+        })) || [];
+      
       setAnalytics({
-        totalViews: userAnalytics.totalViews,
-        totalUniqueViewers: userAnalytics.totalUniqueViewers,
-        activeLinks: userAnalytics.activeLinks,
-        linksCreatedThisMonth: userAnalytics.links.filter(link => {
-          const created = new Date(link.created_at);
-          const now = new Date();
-          return created.getMonth() === now.getMonth() && created.getFullYear() === now.getFullYear();
-        }).length,
-        topLinks: userAnalytics.topLinks,
-        viewsByDate: userAnalytics.viewsByDate
+        totalViews,
+        totalUniqueViewers,
+        activeLinks,
+        linksCreatedThisMonth,
+        topLinks,
+        viewsByDate: {}
       });
     } catch (error) {
       console.error('Error fetching dashboard data:', error);

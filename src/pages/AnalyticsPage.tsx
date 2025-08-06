@@ -55,30 +55,40 @@ export const AnalyticsPage: React.FC = () => {
       
       setUserProfile(profile);
       
-      const days = timeRange === '7d' ? 7 : timeRange === '30d' ? 30 : 90;
-      const userAnalytics = await getUserAnalytics(user.id, days);
+      // Fetch user's links
+      const { data: userLinks } = await supabase
+        .from('timezone_links')
+        .select('*')
+        .eq('user_id', user.id)
+        .order('view_count', { ascending: false });
       
-      // Get detailed analytics for top links
-      const detailedAnalytics = await Promise.all(
-        userAnalytics.topLinks.slice(0, 5).map(async (link) => {
-          const linkAnalytics = await getLinkAnalytics(link.id);
-          return {
-            ...link,
-            analytics: linkAnalytics
-          };
-        })
-      );
+      const totalViews = userLinks?.reduce((sum, link) => sum + link.view_count, 0) || 0;
+      const totalUniqueViewers = userLinks?.reduce((sum, link) => sum + link.unique_viewers, 0) || 0;
+      const activeLinks = userLinks?.filter(link => link.is_active).length || 0;
+      
+      const topLinks = userLinks?.slice(0, 5).map(link => ({
+        id: link.id,
+        title: link.title,
+        slug: link.slug,
+        views: link.view_count,
+        uniqueViewers: link.unique_viewers,
+        analytics: {
+          topTimezones: [],
+          topCountries: [],
+          peakHours: []
+        }
+      })) || [];
 
       setAnalytics({
-        totalViews: userAnalytics.totalViews,
-        totalUniqueViewers: userAnalytics.totalUniqueViewers,
-        activeLinks: userAnalytics.activeLinks,
-        recentViews: userAnalytics.recentViews,
-        topLinks: detailedAnalytics,
-        viewsByDate: userAnalytics.viewsByDate,
-        topTimezones: detailedAnalytics.length > 0 ? detailedAnalytics[0].analytics.topTimezones : [],
-        topCountries: detailedAnalytics.length > 0 ? detailedAnalytics[0].analytics.topCountries : [],
-        peakHours: detailedAnalytics.length > 0 ? detailedAnalytics[0].analytics.peakHours : []
+        totalViews,
+        totalUniqueViewers,
+        activeLinks,
+        recentViews: 0,
+        topLinks,
+        viewsByDate: {},
+        topTimezones: [],
+        topCountries: [],
+        peakHours: []
       });
     } catch (error) {
       console.error('Error fetching analytics:', error);

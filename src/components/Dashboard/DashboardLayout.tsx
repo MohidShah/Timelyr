@@ -17,9 +17,10 @@ import { Button } from '../ui/Button';
 interface DashboardLayoutProps {
   user: any;
   userProfile: any;
+  children: React.ReactNode;
 }
 
-export const DashboardLayout: React.FC<DashboardLayoutProps> = ({ user, userProfile }) => {
+export const DashboardLayout: React.FC<DashboardLayoutProps> = ({ user, userProfile, children }) => {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const location = useLocation();
 
@@ -170,7 +171,7 @@ export const DashboardLayout: React.FC<DashboardLayoutProps> = ({ user, userProf
 
         {/* Page content */}
         <main className="flex-1 overflow-auto">
-          <Outlet />
+          {children}
         </main>
       </div>
     </div>

@@ -1,8 +1,10 @@
 import React, { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { X, Mail, Lock, User } from 'lucide-react';
 import { Button } from '../ui/Button';
 import { Input } from '../ui/Input';
 import { supabase } from '../../lib/supabase';
+import { createUserProfile } from '../../lib/profile';
 
 interface AuthModalProps {
   isOpen: boolean;
@@ -11,6 +13,7 @@ interface AuthModalProps {
 }
 
 export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, mode: initialMode }) => {
+  const navigate = useNavigate();
   const [mode, setMode] = useState(initialMode);
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -27,7 +30,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, mode: ini
 
     try {
       if (mode === 'signup') {
-        const { error } = await supabase.auth.signUp({
+        const { data, error } = await supabase.auth.signUp({
           email,
           password,
           options: {
@@ -37,6 +40,18 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, mode: ini
           },
         });
         if (error) throw error;
+        
+        // Create user profile after successful signup
+        if (data.user) {
+          try {
+            await createUserProfile(data.user.id, {
+              email: data.user.email!,
+              display_name: fullName || data.user.email!.split('@')[0],
+            });
+          } catch (profileError) {
+            console.error('Error creating profile:', profileError);
+          }
+        }
       } else {
         const { error } = await supabase.auth.signInWithPassword({
           email,
@@ -45,6 +60,8 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, mode: ini
         if (error) throw error;
       }
       onClose();
+      // Redirect to dashboard after successful login/signup
+      navigate('/dashboard');
     } catch (error: any) {
       setError(error.message);
     } finally {

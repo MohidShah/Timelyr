@@ -62,6 +62,18 @@ export const ProfilePage: React.FC = () => {
       });
     } catch (error) {
       console.error('Error fetching profile:', error);
+      // If there's an error, still set basic user info
+      const { data: { user } } = await supabase.auth.getUser();
+      if (user) {
+        setUser(user);
+        // Set default form data
+        setFormData({
+          display_name: user.user_metadata?.full_name || user.email!.split('@')[0],
+          username: '',
+          bio: '',
+          default_timezone: 'UTC',
+        });
+      }
     } finally {
       setLoading(false);
     }

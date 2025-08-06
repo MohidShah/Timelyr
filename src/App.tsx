@@ -1,5 +1,5 @@
 import React from 'react';
-import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
+import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import { Navbar } from './components/Navbar';
 import { Footer } from './components/Footer';
 import { DashboardLayout } from './components/Dashboard/DashboardLayout';
@@ -16,6 +16,7 @@ import { TermsPage } from './pages/TermsPage';
 import { ContactPage } from './pages/ContactPage';
 import { useState, useEffect } from 'react';
 import { supabase } from './lib/supabase';
+import { getUserProfile } from './lib/profile';
 
 function App() {
   const [user, setUser] = useState<any>(null);
@@ -26,19 +27,35 @@ function App() {
     // Get initial session
     supabase.auth.getSession().then(({ data: { session } }) => {
       setUser(session?.user ?? null);
+      if (session?.user) {
+        fetchUserProfile(session.user.id);
+      }
       setLoading(false);
     });
 
     // Listen for auth changes
     const {
       data: { subscription },
-    } = supabase.auth.onAuthStateChange((_event, session) => {
+    } = supabase.auth.onAuthStateChange(async (_event, session) => {
       setUser(session?.user ?? null);
+      if (session?.user) {
+        await fetchUserProfile(session.user.id);
+      } else {
+        setUserProfile(null);
+      }
     });
 
     return () => subscription.unsubscribe();
   }, []);
 
+  const fetchUserProfile = async (userId: string) => {
+    try {
+      const profile = await getUserProfile(userId);
+      setUserProfile(profile);
+    } catch (error) {
+      console.error('Error fetching user profile:', error);
+    }
+  };
   const isDashboardRoute = (pathname: string) => {
     return pathname.startsWith('/dashboard') || pathname === '/profile';
   };
@@ -64,17 +81,7 @@ function App() {
               </Routes>
             </DashboardLayout>
           ) : (
-            <div className="min-h-screen bg-white">
-              <Navbar />
-              <div className="flex items-center justify-center min-h-screen">
-                <div className="text-center">
-                  <h1 className="text-2xl font-bold text-gray-800 mb-4">
-                    Please sign in to access the dashboard
-                  </h1>
-                </div>
-              </div>
-              <Footer />
-            </div>
+            <Navigate to="/" replace />
           )
         } />
         
@@ -84,24 +91,14 @@ function App() {
               <ProfilePage />
             </DashboardLayout>
           ) : (
-            <div className="min-h-screen bg-white">
-              <Navbar />
-              <div className="flex items-center justify-center min-h-screen">
-                <div className="text-center">
-                  <h1 className="text-2xl font-bold text-gray-800 mb-4">
-                    Please sign in to access your profile
-                  </h1>
-                </div>
-              </div>
-              <Footer />
-            </div>
+            <Navigate to="/" replace />
           )
         } />
 
         {/* Public Routes */}
         <Route path="/*" element={
           <div className="min-h-screen bg-white">
-            <Navbar />
+            <Navbar user={user} userProfile={userProfile} />
             <Routes>
               <Route path="/" element={<HomePage />} />
               <Route path="/link/:slug" element={<LinkViewPage />} />
