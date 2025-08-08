@@ -7,34 +7,48 @@ export const createUserProfile = async (userId: string, profileData: {
   display_name: string;
   username?: string;
 }): Promise<UserProfile> => {
-  const { data, error } = await supabase
-    .from('user_profiles')
-    .insert({
-      id: userId,
-      email: profileData.email,
-      display_name: profileData.display_name,
-      username: profileData.username || null,
-    })
-    .select()
-    .single();
+  try {
+    const { data, error } = await supabase
+      .from('user_profiles')
+      .insert({
+        id: userId,
+        email: profileData.email,
+        display_name: profileData.display_name,
+        username: profileData.username || null,
+      })
+      .select()
+      .single();
 
-  if (error) throw error;
-  return data;
+    if (error) {
+      console.error('Error creating user profile:', error);
+      throw error;
+    }
+    return data;
+  } catch (error) {
+    console.error('Failed to create user profile:', error);
+    throw error;
+  }
 };
 
 // Get user profile
 export const getUserProfile = async (userId: string): Promise<UserProfile | null> => {
-  const { data, error } = await supabase
-    .from('user_profiles')
-    .select('*')
-    .eq('id', userId)
-    .single();
+  try {
+    const { data, error } = await supabase
+      .from('user_profiles')
+      .select('*')
+      .eq('id', userId)
+      .single();
 
-  if (error && error.code !== 'PGRST116') {
-    throw error;
+    if (error && error.code !== 'PGRST116') {
+      console.error('Error fetching user profile:', error);
+      throw error;
+    }
+
+    return data;
+  } catch (error) {
+    console.error('Failed to get user profile:', error);
+    return null;
   }
-
-  return data;
 };
 
 // Update user profile
