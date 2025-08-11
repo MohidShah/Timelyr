@@ -26,6 +26,11 @@ export class ErrorBoundary extends Component<Props, State> {
   componentDidCatch(error: Error, errorInfo: ErrorInfo) {
     console.error('Error caught by boundary:', error, errorInfo);
     this.setState({ error, errorInfo });
+    
+    // If it's a Supabase connection error, provide more helpful info
+    if (error.message.includes('supabase') || error.message.includes('fetch')) {
+      console.warn('This might be a Supabase connection issue. Check your environment variables.');
+    }
   }
 
   handleReset = () => {

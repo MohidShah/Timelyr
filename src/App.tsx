@@ -37,23 +37,30 @@ function App() {
   useEffect(() => {
     const initializeApp = async () => {
       try {
+        setLoading(true);
         // Get initial session
         const { data: { session }, error: sessionError } = await supabase.auth.getSession();
         
         if (sessionError) {
           console.error('Session error:', sessionError);
-          setError('Failed to initialize authentication');
-          return;
+          // Don't set error for session issues, just continue without user
+          console.warn('Session error, continuing without authentication:', sessionError);
         }
 
         setUser(session?.user ?? null);
         
         if (session?.user) {
-          await fetchUserProfile(session.user.id);
+          try {
+            await fetchUserProfile(session.user.id);
+          } catch (profileError) {
+            console.error('Profile fetch error:', profileError);
+            // Continue even if profile fetch fails
+          }
         }
       } catch (error) {
         console.error('App initialization error:', error);
-        setError('Failed to initialize application');
+        // Don't block the app for initialization errors
+        console.warn('App initialization had issues, continuing anyway:', error);
       } finally {
         setLoading(false);
       }
@@ -68,7 +75,11 @@ function App() {
       try {
         setUser(session?.user ?? null);
         if (session?.user) {
-          await fetchUserProfile(session.user.id);
+          try {
+            await fetchUserProfile(session.user.id);
+          } catch (error) {
+            console.error('Auth state change profile error:', error);
+          }
         } else {
           setUserProfile(null);
         }
@@ -86,7 +97,8 @@ function App() {
       setUserProfile(profile);
     } catch (error) {
       console.error('Error fetching user profile:', error);
-      // Don't set error state here as profile might not exist yet
+      // Profile might not exist yet, that's okay
+      setUserProfile(null);
     }
   };
 

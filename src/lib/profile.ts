@@ -33,6 +33,12 @@ export const createUserProfile = async (userId: string, profileData: {
 // Get user profile
 export const getUserProfile = async (userId: string): Promise<UserProfile | null> => {
   try {
+    // Check if we have valid Supabase configuration
+    if (!import.meta.env.VITE_SUPABASE_URL || !import.meta.env.VITE_SUPABASE_ANON_KEY) {
+      console.warn('Supabase not configured, skipping profile fetch');
+      return null;
+    }
+
     const { data, error } = await supabase
       .from('user_profiles')
       .select('*')
@@ -41,7 +47,7 @@ export const getUserProfile = async (userId: string): Promise<UserProfile | null
 
     if (error && error.code !== 'PGRST116') {
       console.error('Error fetching user profile:', error);
-      throw error;
+      return null; // Return null instead of throwing
     }
 
     return data;
