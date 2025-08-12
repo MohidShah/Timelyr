@@ -35,7 +35,6 @@ export const getUserProfile = async (userId: string): Promise<UserProfile | null
   try {
     // Check if we have valid Supabase configuration
     if (!import.meta.env.VITE_SUPABASE_URL || !import.meta.env.VITE_SUPABASE_ANON_KEY) {
-      console.warn('Supabase not configured, skipping profile fetch');
       return null;
     }
 
@@ -43,11 +42,11 @@ export const getUserProfile = async (userId: string): Promise<UserProfile | null
       .from('user_profiles')
       .select('*')
       .eq('id', userId)
-      .single();
+      .maybeSingle(); // Use maybeSingle to avoid errors when no profile exists
 
-    if (error && error.code !== 'PGRST116') {
+    if (error) {
       console.error('Error fetching user profile:', error);
-      return null; // Return null instead of throwing
+      return null;
     }
 
     return data;

@@ -9,7 +9,26 @@ if (!supabaseUrl || !supabaseAnonKey) {
   console.warn('App will continue but database features will not work.');
 }
 
-export const supabase = createClient(supabaseUrl || 'https://placeholder.supabase.co', supabaseAnonKey || 'placeholder-key', {
+// Create a mock client if Supabase is not configured
+const createMockClient = () => ({
+  auth: {
+    getSession: () => Promise.resolve({ data: { session: null }, error: null }),
+    onAuthStateChange: () => ({ data: { subscription: { unsubscribe: () => {} } } }),
+    signUp: () => Promise.resolve({ data: null, error: new Error('Supabase not configured') }),
+    signInWithPassword: () => Promise.resolve({ data: null, error: new Error('Supabase not configured') }),
+    signOut: () => Promise.resolve({ error: null }),
+    getUser: () => Promise.resolve({ data: { user: null }, error: null })
+  },
+  from: () => ({
+    select: () => ({ eq: () => ({ single: () => Promise.resolve({ data: null, error: new Error('Supabase not configured') }) }) }),
+    insert: () => ({ select: () => ({ single: () => Promise.resolve({ data: null, error: new Error('Supabase not configured') }) }) }),
+    update: () => ({ eq: () => ({ select: () => ({ single: () => Promise.resolve({ data: null, error: new Error('Supabase not configured') }) }) }) }),
+    delete: () => ({ eq: () => Promise.resolve({ error: new Error('Supabase not configured') }) })
+  })
+});
+
+export const supabase = (supabaseUrl && supabaseAnonKey) 
+  ? createClient(supabaseUrl, supabaseAnonKey, {
   auth: {
     autoRefreshToken: true,
     persistSession: true,
@@ -23,10 +42,16 @@ export const supabase = createClient(supabaseUrl || 'https://placeholder.supabas
       'x-application-name': 'timelyr'
     }
   }
-});
+}) 
+  : createMockClient() as any;
 
 // Test connection function
 export const testSupabaseConnection = async () => {
+  if (!supabaseUrl || !supabaseAnonKey) {
+    console.log('Supabase not configured, skipping connection test');
+    return false;
+  }
+  
   try {
     const { data, error } = await supabase.from('user_profiles').select('count').limit(1);
     if (error) {

@@ -32,19 +32,25 @@ function App() {
   const [user, setUser] = useState<any>(null);
   const [userProfile, setUserProfile] = useState<any>(null);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  const [initialized, setInitialized] = useState(false);
 
   useEffect(() => {
     const initializeApp = async () => {
       try {
-        setLoading(true);
+        // Quick check if Supabase is configured
+        if (!import.meta.env.VITE_SUPABASE_URL || !import.meta.env.VITE_SUPABASE_ANON_KEY) {
+          console.warn('Supabase not configured, running in demo mode');
+          setLoading(false);
+          setInitialized(true);
+          return;
+        }
+
         // Get initial session
         const { data: { session }, error: sessionError } = await supabase.auth.getSession();
         
         if (sessionError) {
           console.error('Session error:', sessionError);
-          // Don't set error for session issues, just continue without user
-          console.warn('Session error, continuing without authentication:', sessionError);
+          // Continue without user if session fails
         }
 
         setUser(session?.user ?? null);
@@ -54,15 +60,16 @@ function App() {
             await fetchUserProfile(session.user.id);
           } catch (profileError) {
             console.error('Profile fetch error:', profileError);
-            // Continue even if profile fetch fails
+            // Set profile to null if fetch fails
+            setUserProfile(null);
           }
         }
       } catch (error) {
         console.error('App initialization error:', error);
-        // Don't block the app for initialization errors
-        console.warn('App initialization had issues, continuing anyway:', error);
+        // Continue with app even if initialization has issues
       } finally {
         setLoading(false);
+        setInitialized(true);
       }
     };
 
@@ -79,6 +86,7 @@ function App() {
             await fetchUserProfile(session.user.id);
           } catch (error) {
             console.error('Auth state change profile error:', error);
+            setUserProfile(null);
           }
         } else {
           setUserProfile(null);
@@ -97,31 +105,12 @@ function App() {
       setUserProfile(profile);
     } catch (error) {
       console.error('Error fetching user profile:', error);
-      // Profile might not exist yet, that's okay
       setUserProfile(null);
     }
   };
 
-  if (loading) {
+  if (loading || !initialized) {
     return <LoadingSpinner />;
-  }
-
-  if (error) {
-    return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-        <div className="text-center max-w-md mx-auto p-6">
-          <div className="text-red-500 text-6xl mb-4">⚠️</div>
-          <h1 className="text-2xl font-bold text-gray-800 mb-2">Something went wrong</h1>
-          <p className="text-gray-600 mb-4">{error}</p>
-          <button 
-            onClick={() => window.location.reload()} 
-            className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
-          >
-            Reload Page
-          </button>
-        </div>
-      </div>
-    );
   }
 
   return (

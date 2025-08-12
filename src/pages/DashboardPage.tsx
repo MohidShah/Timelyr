@@ -51,6 +51,11 @@ export const DashboardPage: React.FC = () => {
   }, []);
 
   const fetchDashboardData = async () => {
+    if (!import.meta.env.VITE_SUPABASE_URL || !import.meta.env.VITE_SUPABASE_ANON_KEY) {
+      setLoading(false);
+      return;
+    }
+
     try {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) return;
