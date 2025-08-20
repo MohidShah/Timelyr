@@ -11,7 +11,11 @@ import {
   Clock,
   Globe,
   Share2,
-  QrCode
+  QrCode,
+  Play,
+  Pause,
+  Download,
+  Users
 } from 'lucide-react';
 import { format } from 'date-fns';
 import { formatInTimezone, getUserTimezone } from '../../lib/timezone';
@@ -24,17 +28,25 @@ import type { TimezoneLink } from '../../lib/supabase';
 interface LinkCardProps {
   link: TimezoneLink;
   userPlan?: 'starter' | 'pro';
+  viewMode?: 'grid' | 'list';
   onEdit: (link: TimezoneLink) => void;
   onDelete: (linkId: string) => void;
   onDuplicate: (link: TimezoneLink) => void;
+  onToggleStatus?: (linkId: string, isActive: boolean) => void;
+  onExportCalendar?: (link: TimezoneLink) => void;
+  onShowQR?: (link: TimezoneLink) => void;
 }
 
 export const LinkCard: React.FC<LinkCardProps> = ({ 
   link, 
   userPlan = 'starter',
+  viewMode = 'grid',
   onEdit, 
   onDelete, 
-  onDuplicate 
+  onDuplicate,
+  onToggleStatus,
+  onExportCalendar,
+  onShowQR
 }) => {
   const [showMenu, setShowMenu] = useState(false);
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
@@ -177,6 +189,51 @@ export const LinkCard: React.FC<LinkCardProps> = ({
                       <Copy className="w-4 h-4 mr-2" />
                       Duplicate
                     </button>
+                    {onToggleStatus && (
+                      <button
+                        onClick={() => {
+                          onToggleStatus(link.id, link.is_active);
+                          setShowMenu(false);
+                        }}
+                        className="flex items-center w-full px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
+                      >
+                        {link.is_active ? (
+                          <>
+                            <Pause className="w-4 h-4 mr-2" />
+                            Deactivate
+                          </>
+                        ) : (
+                          <>
+                            <Play className="w-4 h-4 mr-2" />
+                            Activate
+                          </>
+                        )}
+                      </button>
+                    )}
+                    {onExportCalendar && (
+                      <button
+                        onClick={() => {
+                          onExportCalendar(link);
+                          setShowMenu(false);
+                        }}
+                        className="flex items-center w-full px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
+                      >
+                        <Download className="w-4 h-4 mr-2" />
+                        Export .ics
+                      </button>
+                    )}
+                    {hasQRAccess && onShowQR && (
+                      <button
+                        onClick={() => {
+                          onShowQR(link);
+                          setShowMenu(false);
+                        }}
+                        className="flex items-center w-full px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
+                      >
+                        <QrCode className="w-4 h-4 mr-2" />
+                        QR Code
+                      </button>
+                    )}
                     <hr className="my-1" />
                     <button
                       onClick={() => {
@@ -222,17 +279,14 @@ export const LinkCard: React.FC<LinkCardProps> = ({
                 <Share2 className="w-4 h-4 mr-1" />
                 Share
               </Button>
-              {hasQRAccess && (
+              {onExportCalendar && (
                 <Button
                   variant="tertiary"
                   size="sm"
-                  onClick={() => {
-                    // TODO: Show QR code modal
-                    console.log('Show QR code for:', link.slug);
-                  }}
+                  onClick={() => onExportCalendar(link)}
                 >
-                  <Share2 className="w-4 h-4 mr-1" />
-                  QR
+                  <Download className="w-4 h-4 mr-1" />
+                  .ics
                 </Button>
               )}
             </div>

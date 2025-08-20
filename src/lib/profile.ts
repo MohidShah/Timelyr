@@ -196,9 +196,24 @@ export const updateNotificationPreferences = async (
 
 // Delete user account and all associated data
 export const deleteUserAccount = async (userId: string) => {
+  // Check if we're in mock mode
+  const isMockMode = !import.meta.env.VITE_SUPABASE_URL || import.meta.env.VITE_USE_MOCK_DB === 'true';
+  
+  if (isMockMode) {
+    console.log('Mock: Deleting user account:', userId);
+    // In mock mode, just sign out
+    await supabase.auth.signOut();
+    return;
+  }
+  
   // Delete in order due to foreign key constraints
   const tables = [
     'link_analytics',
+    'user_notifications',
+    'user_preferences', 
+    'support_tickets',
+    'user_activity_log',
+    'user_feedback',
     'link_templates', 
     'user_sessions',
     'notification_preferences',
@@ -207,23 +222,31 @@ export const deleteUserAccount = async (userId: string) => {
   ];
 
   for (const table of tables) {
-    const { error } = await supabase
-      .from(table)
-      .delete()
-      .eq(table === 'link_analytics' ? 'link_id' : 'user_id', userId);
+    try {
+      const { error } = await supabase
+        .from(table)
+        .delete()
+        .eq('user_id', userId);
 
-    if (error && table !== 'link_analytics') {
+      if (error) {
+        console.error(`Error deleting from ${table}:`, error);
+      }
+    } catch (error) {
       console.error(`Error deleting from ${table}:`, error);
     }
   }
 
   // Delete avatar from storage
-  const { error: storageError } = await supabase.storage
-    .from('avatars')
-    .remove([`${userId}/avatar.jpg`, `${userId}/avatar.png`, `${userId}/avatar.jpeg`]);
+  try {
+    const { error: storageError } = await supabase.storage
+      .from('avatars')
+      .remove([`${userId}/avatar.jpg`, `${userId}/avatar.png`, `${userId}/avatar.jpeg`]);
 
-  if (storageError) {
-    console.error('Error deleting avatar:', storageError);
+    if (storageError) {
+      console.error('Error deleting avatar:', storageError);
+    }
+  } catch (error) {
+    console.error('Error deleting avatar:', error);
   }
 
   // Sign out the user
