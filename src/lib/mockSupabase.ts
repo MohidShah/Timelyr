@@ -1,312 +1,343 @@
-import React, { useState, useEffect } from 'react';
-import { Button } from './ui/Button';
-import { Input } from './ui/Input';
-import { Card, CardContent, CardHeader } from './ui/Card';
-import { parseNaturalLanguage, getUserTimezone } from '../lib/timezone';
-import { format, addDays, setHours, setMinutes } from 'date-fns';
-import { Clock, Calendar, Globe, MapPin } from 'lucide-react';
+// Mock Supabase client for development and testing
+import { 
+  mockUsers, 
+  mockUserProfiles, 
+  mockTimezoneLinks, 
+  mockLinkAnalytics, 
+  mockNotifications,
+  mockUserPreferences,
+  mockSupportTickets,
+  mockUserFeedback,
+  mockActivityLog,
+  generateMockAnalyticsData
+} from './mockData';
 
-interface TimeInputProps {
-  onTimeSelect: (date: Date, timezone: string, title: string, description?: string) => void;
-  initialData?: {
-    title: string;
-    description?: string;
-    date: Date;
-    timezone: string;
-  };
-  userPlan?: 'starter' | 'pro';
-}
-
-export const TimeInput: React.FC<TimeInputProps> = ({ onTimeSelect, initialData, userPlan = 'starter' }) => {
-  const [mode, setMode] = useState<'natural' | 'guided'>('natural');
-  const [naturalInput, setNaturalInput] = useState('');
-  const [title, setTitle] = useState(initialData?.title || '');
-  const [description, setDescription] = useState(initialData?.description || '');
-  const [parsedTime, setParsedTime] = useState<Date | null>(null);
-  const [selectedDate, setSelectedDate] = useState(
-    initialData ? format(initialData.date, 'yyyy-MM-dd') : format(new Date(), 'yyyy-MM-dd')
-  );
-  const [selectedTime, setSelectedTime] = useState(
-    initialData ? format(initialData.date, 'HH:mm') : '14:00'
-  );
-  const [selectedTimezone, setSelectedTimezone] = useState(
-    initialData?.timezone || getUserTimezone()
-  );
-  const [useAutoDetection, setUseAutoDetection] = useState(true);
-  const [showCustomSlugInput, setShowCustomSlugInput] = useState(false);
-  const [customSlug, setCustomSlug] = useState('');
-
-  useEffect(() => {
-    if (naturalInput) {
-      const parsed = parseNaturalLanguage(naturalInput);
-      setParsedTime(parsed);
-    } else {
-      setParsedTime(null);
-    }
-  }, [naturalInput]);
-
-  const handleNaturalSubmit = () => {
-    if (parsedTime && title) {
-      onTimeSelect(parsedTime, useAutoDetection ? getUserTimezone() : selectedTimezone, title, description);
-    }
-  };
-
-  const handleGuidedSubmit = () => {
-    if (selectedDate && selectedTime && title) {
-      const [hours, minutes] = selectedTime.split(':').map(Number);
-      const date = new Date(selectedDate);
-      const finalDate = setHours(setMinutes(date, minutes), hours);
-      onTimeSelect(finalDate, useAutoDetection ? getUserTimezone() : selectedTimezone, title, description);
-    }
-  };
-
-  const quickPresets = [
-    { label: 'Tomorrow 9 AM', action: () => setNaturalInput('Tomorrow 9 AM') },
-    { label: 'Tomorrow 2 PM', action: () => setNaturalInput('Tomorrow 2 PM') },
-    { label: 'Next Monday 10 AM', action: () => setNaturalInput('Next Monday 10 AM') },
-    { label: 'Next Friday 3 PM', action: () => setNaturalInput('Next Friday 3 PM') },
-  ];
-
-  return (
-    <Card className="max-w-2xl mx-auto">
-      <CardHeader>
-        <div className="flex space-x-1 bg-gray-100 rounded-lg p-1">
-          <button
-            onClick={() => setMode('natural')}
-            className={`flex-1 px-4 py-2 text-sm font-medium rounded-md transition-all duration-200 ${
-              mode === 'natural'
-                ? 'bg-white text-blue-600 shadow-sm'
-                : 'text-gray-600 hover:text-gray-800'
-            }`}
-          >
-            <Clock className="w-4 h-4 inline mr-2" />
-            Natural Language
-          </button>
-          <button
-            onClick={() => setMode('guided')}
-            className={`flex-1 px-4 py-2 text-sm font-medium rounded-md transition-all duration-200 ${
-              mode === 'guided'
-                ? 'bg-white text-blue-600 shadow-sm'
-                : 'text-gray-600 hover:text-gray-800'
-            }`}
-          >
-            <Calendar className="w-4 h-4 inline mr-2" />
-            Guided Selection
-          </button>
-        </div>
-      </CardHeader>
-
-      <CardContent className="space-y-6">
-        <Input
-          label="Event Title"
-          placeholder="Team meeting, Coffee chat, etc."
-          value={title}
-          onChange={(e) => setTitle(e.target.value)}
-        />
-
-        <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">
-            Description (Optional)
-          </label>
-          <textarea
-            value={description}
-            onChange={(e) => setDescription(e.target.value)}
-            placeholder="Add more details about your meeting..."
-            rows={3}
-            className="w-full px-3 py-2 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200"
-          />
-        </div>
-
-        {/* Custom Slug for Pro Users */}
-        {userPlan === 'pro' && (
-          <div>
-            <div className="flex items-center justify-between mb-2">
-              <label className="block text-sm font-medium text-gray-700">
-                Custom URL (Optional)
-              </label>
-              <button
-                type="button"
-                onClick={() => setShowCustomSlugInput(!showCustomSlugInput)}
-                className="text-sm text-blue-600 hover:text-blue-700"
-              >
-                {showCustomSlugInput ? 'Use Auto-Generated' : 'Customize URL'}
-              </button>
-            </div>
-            {showCustomSlugInput && (
-              <div className="space-y-2">
-                <div className="flex items-center">
-                  <span className="text-sm text-gray-500 mr-2">timelyr.com/</span>
-                  <input
-                    type="text"
-                    value={customSlug}
-                    onChange={(e) => setCustomSlug(e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, '-'))}
-                    placeholder="my-awesome-meeting"
-                    className="flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  />
-                </div>
-                <p className="text-xs text-gray-500">
-                  Use letters, numbers, and hyphens only. Leave empty for auto-generated URL.
-                </p>
-              </div>
-            )}
-          </div>
-        )}
-
-        {mode === 'natural' ? (
-          <div className="space-y-4">
-            <Input
-              label="When is this happening?"
-              placeholder="Tomorrow 2 PM PST, Next Monday 9am, Jan 15 at 2pm Pacific"
-              value={naturalInput}
-              onChange={(e) => setNaturalInput(e.target.value)}
-              helper="Try: 'Tomorrow 2 PM', 'Next Monday 9am', or 'Jan 15 at 2pm'"
-            />
-
-            {parsedTime && (
-              <div className="p-4 bg-green-50 border border-green-200 rounded-lg">
-                <p className="text-green-800 font-medium">
-                  ✓ Parsed: {format(parsedTime, 'EEEE, MMMM d, yyyy \'at\' h:mm a')}
-                </p>
-              </div>
-            )}
-
-            <div className="grid grid-cols-2 gap-2">
-              {quickPresets.map((preset, index) => (
-                <Button
-                  key={index}
-                  variant="tertiary"
-                  size="sm"
-                  onClick={preset.action}
-                >
-                  {preset.label}
-                </Button>
-              ))}
-            </div>
-
-            {/* Timezone Selection for Natural Language */}
-            <div className="space-y-3">
-              <div className="flex items-center space-x-3">
-                <input
-                  type="checkbox"
-                  id="autoDetect"
-                  checked={useAutoDetection}
-                  onChange={(e) => setUseAutoDetection(e.target.checked)}
-                  className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
-                />
-                <label htmlFor="autoDetect" className="text-sm font-medium text-gray-700">
-                  <MapPin className="w-4 h-4 inline mr-1" />
-                  Auto-detect my timezone
-                </label>
-              </div>
-              
-              {!useAutoDetection && (
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    <Globe className="w-4 h-4 inline mr-1" />
-                    Select Timezone
-                  </label>
-                  <select
-                    value={selectedTimezone}
-                    onChange={(e) => setSelectedTimezone(e.target.value)}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                  >
-                    <optgroup label="Common Timezones">
-                      <option value="America/New_York">Eastern Time (ET)</option>
-                      <option value="America/Chicago">Central Time (CT)</option>
-                      <option value="America/Denver">Mountain Time (MT)</option>
-                      <option value="America/Los_Angeles">Pacific Time (PT)</option>
-                      <option value="Europe/London">London (GMT/BST)</option>
-                      <option value="Europe/Paris">Paris (CET/CEST)</option>
-                      <option value="Asia/Tokyo">Tokyo (JST)</option>
-                      <option value="Asia/Shanghai">Beijing (CST)</option>
-                      <option value="Asia/Karachi">Islamabad (PKT)</option>
-                      <option value="Australia/Sydney">Sydney (AEDT/AEST)</option>
-                    </optgroup>
-                  </select>
-                </div>
-              )}
-            </div>
-            <Button
-              onClick={handleNaturalSubmit}
-              disabled={!parsedTime || !title}
-              className="w-full"
-              size="lg"
-            >
-              Create Timezone Link
-            </Button>
-          </div>
-        ) : (
-          <div className="space-y-4">
-            <div className="grid grid-cols-2 gap-4">
-              <Input
-                label="Date"
-                type="date"
-                value={selectedDate}
-                onChange={(e) => setSelectedDate(e.target.value)}
-              />
-              <Input
-                label="Time"
-                type="time"
-                value={selectedTime}
-                onChange={(e) => setSelectedTime(e.target.value)}
-              />
-            </div>
-
-            {/* Timezone Selection for Guided Mode */}
-            <div className="space-y-3">
-              <div className="flex items-center space-x-3">
-                <input
-                  type="checkbox"
-                  id="autoDetectGuided"
-                  checked={useAutoDetection}
-                  onChange={(e) => setUseAutoDetection(e.target.checked)}
-                  className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
-                />
-                <label htmlFor="autoDetectGuided" className="text-sm font-medium text-gray-700">
-                  <MapPin className="w-4 h-4 inline mr-1" />
-                  Auto-detect my timezone
-                </label>
-              </div>
-              
-              {!useAutoDetection && (
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    <Globe className="w-4 h-4 inline mr-1" />
-                    Select Timezone
-                  </label>
-                  <select
-                    value={selectedTimezone}
-                    onChange={(e) => setSelectedTimezone(e.target.value)}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                  >
-                    <optgroup label="Common Timezones">
-                      <option value="America/New_York">Eastern Time (ET)</option>
-                      <option value="America/Chicago">Central Time (CT)</option>
-                      <option value="America/Denver">Mountain Time (MT)</option>
-                      <option value="America/Los_Angeles">Pacific Time (PT)</option>
-                      <option value="Europe/London">London (GMT/BST)</option>
-                      <option value="Europe/Paris">Paris (CET/CEST)</option>
-                      <option value="Asia/Tokyo">Tokyo (JST)</option>
-                      <option value="Asia/Shanghai">Beijing (CST)</option>
-                      <option value="Asia/Karachi">Islamabad (PKT)</option>
-                      <option value="Australia/Sydney">Sydney (AEDT/AEST)</option>
-                    </optgroup>
-                  </select>
-                </div>
-              )}
-            </div>
-
-            <Button
-              onClick={handleGuidedSubmit}
-              disabled={!selectedDate || !selectedTime || !title}
-              className="w-full"
-              size="lg"
-            >
-              Create Timezone Link
-            </Button>
-          </div>
-        )}
-      </CardContent>
-    </Card>
-  );
+// In-memory storage for mock data
+let mockStorage = {
+  users: { ...mockUsers },
+  userProfiles: { ...mockUserProfiles },
+  timezoneLinks: [...mockTimezoneLinks],
+  linkAnalytics: [...mockLinkAnalytics],
+  notifications: [...mockNotifications],
+  userPreferences: { ...mockUserPreferences },
+  supportTickets: [...mockSupportTickets],
+  userFeedback: [...mockUserFeedback],
+  activityLog: [...mockActivityLog],
+  currentUser: null as any,
+  session: null as any
 };
+
+// Mock auth methods
+const mockAuth = {
+  getSession: async () => ({
+    data: { session: mockStorage.session },
+    error: null
+  }),
+  
+  getUser: async () => ({
+    data: { user: mockStorage.currentUser },
+    error: null
+  }),
+  
+  signUp: async ({ email, password, options }: any) => {
+    const userId = `user-${Date.now()}`;
+    const newUser = {
+      id: userId,
+      email,
+      user_metadata: options?.data || {},
+      created_at: new Date().toISOString()
+    };
+    
+    mockStorage.users[userId] = newUser;
+    mockStorage.currentUser = newUser;
+    mockStorage.session = { user: newUser, access_token: 'mock-token' };
+    
+    return {
+      data: { user: newUser, session: mockStorage.session },
+      error: null
+    };
+  },
+  
+  signInWithPassword: async ({ email, password }: any) => {
+    // Find user by email
+    const user = Object.values(mockStorage.users).find((u: any) => u.email === email);
+    
+    if (!user) {
+      return {
+        data: { user: null, session: null },
+        error: { message: 'Invalid login credentials' }
+      };
+    }
+    
+    mockStorage.currentUser = user;
+    mockStorage.session = { user, access_token: 'mock-token' };
+    
+    return {
+      data: { user, session: mockStorage.session },
+      error: null
+    };
+  },
+  
+  signOut: async () => {
+    mockStorage.currentUser = null;
+    mockStorage.session = null;
+    return { error: null };
+  },
+  
+  updateUser: async (updates: any) => {
+    if (!mockStorage.currentUser) {
+      return { data: { user: null }, error: { message: 'Not authenticated' } };
+    }
+    
+    mockStorage.currentUser = { ...mockStorage.currentUser, ...updates };
+    return { data: { user: mockStorage.currentUser }, error: null };
+  },
+  
+  onAuthStateChange: (callback: any) => {
+    // Mock subscription
+    return {
+      data: {
+        subscription: {
+          unsubscribe: () => {}
+        }
+      }
+    };
+  }
+};
+
+// Mock database methods
+const createMockTable = (tableName: string) => ({
+  select: (columns = '*') => ({
+    eq: (column: string, value: any) => ({
+      single: async () => {
+        let data;
+        
+        switch (tableName) {
+          case 'user_profiles':
+            data = Object.values(mockStorage.userProfiles).find((p: any) => p[column] === value);
+            break;
+          case 'timezone_links':
+            data = mockStorage.timezoneLinks.find((l: any) => l[column] === value);
+            break;
+          case 'link_analytics':
+            data = mockStorage.linkAnalytics.filter((a: any) => a[column] === value);
+            break;
+          case 'user_notifications':
+            data = mockStorage.notifications.filter((n: any) => n[column] === value);
+            break;
+          case 'user_preferences':
+            data = Object.values(mockStorage.userPreferences).find((p: any) => p[column] === value);
+            break;
+          case 'support_tickets':
+            data = mockStorage.supportTickets.filter((t: any) => t[column] === value);
+            break;
+          case 'user_feedback':
+            data = mockStorage.userFeedback.filter((f: any) => f[column] === value);
+            break;
+          case 'user_activity_log':
+            data = mockStorage.activityLog.filter((a: any) => a[column] === value);
+            break;
+          default:
+            data = null;
+        }
+        
+        return { data, error: null };
+      },
+      
+      maybeSingle: async () => {
+        const result = await this.single();
+        return result;
+      }
+    }),
+    
+    order: (column: string, options: any = {}) => ({
+      limit: (count: number) => ({
+        then: async (callback: any) => {
+          let data;
+          
+          switch (tableName) {
+            case 'timezone_links':
+              data = [...mockStorage.timezoneLinks]
+                .sort((a: any, b: any) => {
+                  const aVal = new Date(a[column]).getTime();
+                  const bVal = new Date(b[column]).getTime();
+                  return options.ascending ? aVal - bVal : bVal - aVal;
+                })
+                .slice(0, count);
+              break;
+            case 'user_notifications':
+              data = [...mockStorage.notifications]
+                .sort((a: any, b: any) => {
+                  const aVal = new Date(a[column]).getTime();
+                  const bVal = new Date(b[column]).getTime();
+                  return options.ascending ? aVal - bVal : bVal - aVal;
+                })
+                .slice(0, count);
+              break;
+            default:
+              data = [];
+          }
+          
+          return callback({ data, error: null });
+        }
+      })
+    })
+  }),
+  
+  insert: (data: any) => ({
+    select: () => ({
+      single: async () => {
+        const newItem = {
+          id: `${tableName}-${Date.now()}`,
+          ...data,
+          created_at: new Date().toISOString(),
+          updated_at: new Date().toISOString()
+        };
+        
+        switch (tableName) {
+          case 'user_profiles':
+            mockStorage.userProfiles[newItem.id] = newItem;
+            break;
+          case 'timezone_links':
+            mockStorage.timezoneLinks.push(newItem);
+            break;
+          case 'link_analytics':
+            mockStorage.linkAnalytics.push(newItem);
+            break;
+          case 'user_notifications':
+            mockStorage.notifications.push(newItem);
+            break;
+          case 'support_tickets':
+            mockStorage.supportTickets.push(newItem);
+            break;
+          case 'user_feedback':
+            mockStorage.userFeedback.push(newItem);
+            break;
+          case 'user_activity_log':
+            mockStorage.activityLog.push(newItem);
+            break;
+        }
+        
+        return { data: newItem, error: null };
+      }
+    })
+  }),
+  
+  update: (updates: any) => ({
+    eq: (column: string, value: any) => ({
+      select: () => ({
+        single: async () => {
+          let updatedItem;
+          
+          switch (tableName) {
+            case 'user_profiles':
+              const profile = Object.values(mockStorage.userProfiles).find((p: any) => p[column] === value);
+              if (profile) {
+                updatedItem = { ...profile, ...updates, updated_at: new Date().toISOString() };
+                mockStorage.userProfiles[updatedItem.id] = updatedItem;
+              }
+              break;
+            case 'timezone_links':
+              const linkIndex = mockStorage.timezoneLinks.findIndex((l: any) => l[column] === value);
+              if (linkIndex !== -1) {
+                updatedItem = { 
+                  ...mockStorage.timezoneLinks[linkIndex], 
+                  ...updates, 
+                  updated_at: new Date().toISOString() 
+                };
+                mockStorage.timezoneLinks[linkIndex] = updatedItem;
+              }
+              break;
+            case 'user_preferences':
+              const pref = Object.values(mockStorage.userPreferences).find((p: any) => p[column] === value);
+              if (pref) {
+                updatedItem = { ...pref, ...updates, updated_at: new Date().toISOString() };
+                mockStorage.userPreferences[updatedItem.user_id] = updatedItem;
+              }
+              break;
+          }
+          
+          return { data: updatedItem, error: null };
+        }
+      })
+    })
+  }),
+  
+  delete: () => ({
+    eq: (column: string, value: any) => ({
+      then: async (callback: any) => {
+        switch (tableName) {
+          case 'timezone_links':
+            mockStorage.timezoneLinks = mockStorage.timezoneLinks.filter((l: any) => l[column] !== value);
+            break;
+          case 'user_notifications':
+            mockStorage.notifications = mockStorage.notifications.filter((n: any) => n[column] !== value);
+            break;
+        }
+        
+        return callback({ error: null });
+      }
+    })
+  }),
+  
+  upsert: (data: any) => ({
+    select: () => ({
+      single: async () => {
+        // For upsert, we'll just treat it as insert for simplicity
+        return this.insert(data).select().single();
+      }
+    })
+  })
+});
+
+// Mock storage methods
+const mockStorage_api = {
+  from: (bucket: string) => ({
+    upload: async (path: string, file: File, options: any = {}) => {
+      // Mock file upload - return a fake URL
+      const fakeUrl = `https://mock-storage.supabase.co/storage/v1/object/public/${bucket}/${path}`;
+      return { data: { path }, error: null };
+    },
+    
+    getPublicUrl: (path: string) => ({
+      data: { publicUrl: `https://mock-storage.supabase.co/storage/v1/object/public/${path}` }
+    }),
+    
+    remove: async (paths: string[]) => ({
+      data: paths,
+      error: null
+    })
+  })
+};
+
+// Mock channel methods
+const mockChannel = (channelName: string) => ({
+  on: (type: string, config: any, callback: any) => mockChannel(channelName),
+  send: async (message: any) => ({ error: null }),
+  subscribe: () => ({ error: null }),
+  unsubscribe: () => ({ error: null })
+});
+
+// Create mock Supabase client
+export const createMockSupabaseClient = () => ({
+  auth: mockAuth,
+  
+  from: (tableName: string) => createMockTable(tableName),
+  
+  storage: mockStorage_api,
+  
+  channel: mockChannel,
+  
+  removeChannel: (channel: any) => {},
+  
+  raw: (sql: string) => sql, // For raw SQL queries
+  
+  // Mock realtime subscriptions
+  realtime: {
+    channel: mockChannel,
+    removeChannel: () => {}
+  }
+});
+
+// Export mock analytics data generator
+export { generateMockAnalyticsData };
