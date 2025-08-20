@@ -178,6 +178,7 @@ class MockQueryBuilder {
 class MockInsertBuilder {
   private tableName: string;
   private insertData: any;
+  private selectFields = '*';
 
   constructor(tableName: string, data: any) {
     this.tableName = tableName;
@@ -185,6 +186,7 @@ class MockInsertBuilder {
   }
 
   select(fields = '*') {
+    this.selectFields = fields;
     return this;
   }
 
