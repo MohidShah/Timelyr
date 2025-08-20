@@ -17,6 +17,7 @@ import { ContactPage } from './pages/ContactPage';
 import { useState, useEffect, Suspense } from 'react';
 import { supabase } from './lib/supabase';
 import { getUserProfile } from './lib/profile';
+import { MockDataIndicator } from './components/MockDataIndicator';
 
 // Loading component
 const LoadingSpinner = () => (
@@ -116,6 +117,7 @@ function App() {
   return (
     <Suspense fallback={<LoadingSpinner />}>
       <Router>
+        <MockDataIndicator />
         <Routes>
           {/* Dashboard Routes */}
           <Route path="/dashboard/*" element={

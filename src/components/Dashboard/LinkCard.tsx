@@ -76,6 +76,7 @@ export const LinkCard: React.FC<LinkCardProps> = ({
 
   const handleDuplicate = () => {
     onDuplicate(link);
+    setShowMenu(false);
   };
 
   const getStatusBadge = () => {

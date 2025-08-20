@@ -180,7 +180,18 @@ export const DashboardPage: React.FC = () => {
 
   const handleDuplicateLink = async (link: TimezoneLink) => {
     try {
+      if (!user) return;
+      
+      // Check if user can create more links
+      const { canCreate, reason } = await canCreateLink(user.id);
+      if (!canCreate) {
+        setUpgradeReason(reason || 'Upgrade to Pro for unlimited links');
+        setShowUpgradePrompt(true);
+        return;
+      }
+      
       const newSlug = generateSlug(link.title + ' Copy', new Date(link.scheduled_time));
+      const expirationDate = getDefaultExpiration(userProfile?.plan || 'starter');
       
       const { error } = await supabase
         .from('timezone_links')
@@ -191,10 +202,15 @@ export const DashboardPage: React.FC = () => {
           timezone: link.timezone,
           slug: newSlug,
           is_active: true,
+          expires_at: expirationDate.toISOString(),
           user_id: user?.id,
         });
 
       if (error) throw error;
+      
+      // Increment the user's monthly link count
+      await incrementLinksCreated(user.id);
+      
       fetchDashboardData(); // Refresh data
     } catch (error) {
       console.error('Error duplicating link:', error);

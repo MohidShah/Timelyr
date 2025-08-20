@@ -1,55 +1,50 @@
 import { createClient } from '@supabase/supabase-js';
+import { createMockSupabaseClient } from './mockSupabase';
 
 const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
 const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
 
+// Check if we should use mock mode
+const useMockMode = !supabaseUrl || !supabaseAnonKey || import.meta.env.VITE_USE_MOCK_DB === 'true';
 if (!supabaseUrl || !supabaseAnonKey) {
-  console.warn('Missing Supabase environment variables. Please check your .env file.');
+  console.warn('Missing Supabase environment variables. Using mock database for development.');
   console.warn('Required variables: VITE_SUPABASE_URL, VITE_SUPABASE_ANON_KEY');
-  console.warn('App will continue but database features will not work.');
+  console.warn('Set VITE_USE_MOCK_DB=false to disable mock mode when you have real credentials.');
 }
 
-// Create a mock client if Supabase is not configured
-const createMockClient = () => ({
-  auth: {
-    getSession: () => Promise.resolve({ data: { session: null }, error: null }),
-    onAuthStateChange: () => ({ data: { subscription: { unsubscribe: () => {} } } }),
-    signUp: () => Promise.resolve({ data: null, error: new Error('Supabase not configured') }),
-    signInWithPassword: () => Promise.resolve({ data: null, error: new Error('Supabase not configured') }),
-    signOut: () => Promise.resolve({ error: null }),
-    getUser: () => Promise.resolve({ data: { user: null }, error: null })
-  },
-  from: () => ({
-    select: () => ({ eq: () => ({ single: () => Promise.resolve({ data: null, error: new Error('Supabase not configured') }) }) }),
-    insert: () => ({ select: () => ({ single: () => Promise.resolve({ data: null, error: new Error('Supabase not configured') }) }) }),
-    update: () => ({ eq: () => ({ select: () => ({ single: () => Promise.resolve({ data: null, error: new Error('Supabase not configured') }) }) }) }),
-    delete: () => ({ eq: () => Promise.resolve({ error: new Error('Supabase not configured') }) })
-  })
-});
+export const supabase = useMockMode 
+  ? createMockSupabaseClient() as any
+  : createClient(supabaseUrl, supabaseAnonKey, {
+      auth: {
+        autoRefreshToken: true,
+        persistSession: true,
+        detectSessionInUrl: true
+      },
+      db: {
+        schema: 'public'
+      },
+      global: {
+        headers: {
+          'x-application-name': 'timelyr'
+        }
+      }
+    });
 
-export const supabase = (supabaseUrl && supabaseAnonKey) 
-  ? createClient(supabaseUrl, supabaseAnonKey, {
-  auth: {
-    autoRefreshToken: true,
-    persistSession: true,
-    detectSessionInUrl: true
-  },
-  db: {
-    schema: 'public'
-  },
-  global: {
-    headers: {
-      'x-application-name': 'timelyr'
-    }
-  }
-}) 
-  : createMockClient() as any;
+// Log the mode we're using
+if (useMockMode) {
+  console.log('🔧 Running in MOCK DATABASE mode');
+  console.log('📊 All data is simulated and stored in memory');
+  console.log('🔄 Data will reset on page refresh');
+  console.log('⚙️ Set VITE_USE_MOCK_DB=false in .env to use real Supabase');
+} else {
+  console.log('🚀 Connected to Supabase database');
+}
 
 // Test connection function
 export const testSupabaseConnection = async () => {
-  if (!supabaseUrl || !supabaseAnonKey) {
-    console.log('Supabase not configured, skipping connection test');
-    return false;
+  if (useMockMode) {
+    console.log('Mock database connection successful');
+    return true;
   }
   
   try {
@@ -65,6 +60,7 @@ export const testSupabaseConnection = async () => {
     return false;
   }
 };
+
 export type Database = {
   public: {
     Tables: {

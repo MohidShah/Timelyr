@@ -1,4 +1,5 @@
 import { supabase } from './supabase';
+import { generateMockAnalyticsData } from './mockSupabase';
 import type { LinkAnalytics, TimezoneLink } from './supabase';
 
 // Track link view with analytics
@@ -119,6 +120,9 @@ export const getLinkAnalytics = async (linkId: string) => {
 
 // Get user's overall analytics
 export const getUserAnalytics = async (userId: string, days: number = 30) => {
+  // Check if we're in mock mode
+  const isMockMode = !import.meta.env.VITE_SUPABASE_URL || import.meta.env.VITE_USE_MOCK_DB === 'true';
+  
   const startDate = new Date();
   startDate.setDate(startDate.getDate() - days);
 
@@ -158,12 +162,14 @@ export const getUserAnalytics = async (userId: string, days: number = 30) => {
       uniqueViewers: link.unique_viewers,
     }));
 
-  // Views trend over time
-  const viewsByDate = data.reduce((acc, view) => {
-    const date = new Date(view.viewed_at).toISOString().split('T')[0];
-    acc[date] = (acc[date] || 0) + 1;
-    return acc;
-  }, {} as Record<string, number>);
+  // Views trend over time - use mock data if in mock mode
+  const viewsByDate = isMockMode 
+    ? generateMockAnalyticsData(days)
+    : data.reduce((acc, view) => {
+        const date = new Date(view.viewed_at).toISOString().split('T')[0];
+        acc[date] = (acc[date] || 0) + 1;
+        return acc;
+      }, {} as Record<string, number>);
 
   return {
     links,
