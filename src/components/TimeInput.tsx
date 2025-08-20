@@ -7,7 +7,6 @@ import { format, addDays, setHours, setMinutes } from 'date-fns';
 import { Clock, Calendar, Globe, MapPin } from 'lucide-react';
 
 interface TimeInputProps {
-  onTimeSelect: (date: Date, timezone: string, title: string) => void;
   onTimeSelect: (date: Date, timezone: string, title: string, description?: string) => void;
   initialData?: {
     title: string;

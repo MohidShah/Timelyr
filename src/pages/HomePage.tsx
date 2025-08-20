@@ -28,6 +28,7 @@ export const HomePage: React.FC = () => {
           timezone,
           slug,
           is_active: true,
+          expires_at: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(), // 30 days from now
           user_id: user?.id || null, // Use user ID if logged in, otherwise anonymous
         })
         .select()
@@ -38,6 +39,7 @@ export const HomePage: React.FC = () => {
       navigate(`/link/${slug}`);
     } catch (error) {
       console.error('Error creating link:', error);
+      alert('Failed to create link. Please try again.');
     }
   };
 

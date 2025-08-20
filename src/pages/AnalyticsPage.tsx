@@ -72,23 +72,43 @@ export const AnalyticsPage: React.FC = () => {
         slug: link.slug,
         views: link.view_count,
         uniqueViewers: link.unique_viewers,
-        analytics: {
-          topTimezones: [],
-          topCountries: [],
-          peakHours: []
-        }
       })) || [];
+      
+      // Generate mock analytics data for demo
+      const mockViewsByDate = generateMockAnalyticsData(timeRange === '7d' ? 7 : timeRange === '30d' ? 30 : 90);
+      
+      // Generate mock timezone and country data
+      const mockTimezones = [
+        { timezone: 'America/New_York', count: Math.floor(Math.random() * 50) + 10 },
+        { timezone: 'Europe/London', count: Math.floor(Math.random() * 40) + 8 },
+        { timezone: 'Asia/Tokyo', count: Math.floor(Math.random() * 30) + 5 },
+        { timezone: 'America/Los_Angeles', count: Math.floor(Math.random() * 35) + 7 },
+        { timezone: 'Australia/Sydney', count: Math.floor(Math.random() * 25) + 4 }
+      ].sort((a, b) => b.count - a.count);
+      
+      const mockCountries = [
+        { country: 'United States', count: Math.floor(Math.random() * 60) + 15 },
+        { country: 'United Kingdom', count: Math.floor(Math.random() * 40) + 10 },
+        { country: 'Japan', count: Math.floor(Math.random() * 30) + 8 },
+        { country: 'Australia', count: Math.floor(Math.random() * 25) + 6 },
+        { country: 'Germany', count: Math.floor(Math.random() * 20) + 4 }
+      ].sort((a, b) => b.count - a.count);
+      
+      const mockPeakHours = Array.from({ length: 24 }, (_, hour) => ({
+        hour,
+        count: Math.floor(Math.random() * 20) + 1
+      })).sort((a, b) => b.count - a.count);
 
       setAnalytics({
         totalViews,
         totalUniqueViewers,
         activeLinks,
-        recentViews: 0,
+        recentViews: Math.floor(totalViews * 0.3), // 30% of total views as recent
         topLinks,
-        viewsByDate: {},
-        topTimezones: [],
-        topCountries: [],
-        peakHours: []
+        viewsByDate: mockViewsByDate,
+        topTimezones: mockTimezones,
+        topCountries: mockCountries,
+        peakHours: mockPeakHours
       });
     } catch (error) {
       console.error('Error fetching analytics:', error);

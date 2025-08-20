@@ -50,6 +50,45 @@ export const createNotification = async (userId: string, notification: {
 
 // Get user notifications
 export const getUserNotifications = async (userId: string, limit = 20) => {
+  // Check if we're in mock mode
+  const isMockMode = !import.meta.env.VITE_SUPABASE_URL || import.meta.env.VITE_USE_MOCK_DB === 'true';
+  
+  if (isMockMode) {
+    // Return mock notifications
+    return [
+      {
+        id: 'mock-1',
+        user_id: userId,
+        type: 'link_expiring',
+        title: 'Link Expiring Soon',
+        message: 'Your link "Weekly Team Standup" will expire in 3 days.',
+        is_read: false,
+        action_url: '/dashboard',
+        created_at: new Date(Date.now() - 2 * 60 * 60 * 1000).toISOString()
+      },
+      {
+        id: 'mock-2',
+        user_id: userId,
+        type: 'feature_announcement',
+        title: 'New Feature: QR Codes',
+        message: 'Pro users can now generate QR codes for their timezone links!',
+        is_read: true,
+        action_url: '/pricing',
+        created_at: new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString()
+      },
+      {
+        id: 'mock-3',
+        user_id: userId,
+        type: 'usage_limit_warning',
+        title: 'Monthly Limit Reminder',
+        message: 'You\'ve created 15 links this month. Upgrade to Pro for unlimited links.',
+        is_read: false,
+        action_url: '/pricing',
+        created_at: new Date(Date.now() - 6 * 60 * 60 * 1000).toISOString()
+      }
+    ];
+  }
+  
   const { data, error } = await supabase
     .from('user_notifications')
     .select('*')
@@ -63,6 +102,14 @@ export const getUserNotifications = async (userId: string, limit = 20) => {
 
 // Mark notifications as read
 export const markNotificationsRead = async (userId: string, notificationIds: string[]) => {
+  // Check if we're in mock mode
+  const isMockMode = !import.meta.env.VITE_SUPABASE_URL || import.meta.env.VITE_USE_MOCK_DB === 'true';
+  
+  if (isMockMode) {
+    console.log('Mock: Marking notifications as read:', notificationIds);
+    return;
+  }
+  
   const { error } = await supabase
     .from('user_notifications')
     .update({ is_read: true })
@@ -74,6 +121,14 @@ export const markNotificationsRead = async (userId: string, notificationIds: str
 
 // Mark all notifications as read
 export const markAllNotificationsRead = async (userId: string) => {
+  // Check if we're in mock mode
+  const isMockMode = !import.meta.env.VITE_SUPABASE_URL || import.meta.env.VITE_USE_MOCK_DB === 'true';
+  
+  if (isMockMode) {
+    console.log('Mock: Marking all notifications as read for user:', userId);
+    return;
+  }
+  
   const { error } = await supabase
     .from('user_notifications')
     .update({ is_read: true })
@@ -85,6 +140,14 @@ export const markAllNotificationsRead = async (userId: string) => {
 
 // Delete notification
 export const deleteNotification = async (userId: string, notificationId: string) => {
+  // Check if we're in mock mode
+  const isMockMode = !import.meta.env.VITE_SUPABASE_URL || import.meta.env.VITE_USE_MOCK_DB === 'true';
+  
+  if (isMockMode) {
+    console.log('Mock: Deleting notification:', notificationId);
+    return;
+  }
+  
   const { error } = await supabase
     .from('user_notifications')
     .delete()
@@ -96,6 +159,14 @@ export const deleteNotification = async (userId: string, notificationId: string)
 
 // Get unread notification count
 export const getUnreadNotificationCount = async (userId: string) => {
+  // Check if we're in mock mode
+  const isMockMode = !import.meta.env.VITE_SUPABASE_URL || import.meta.env.VITE_USE_MOCK_DB === 'true';
+  
+  if (isMockMode) {
+    // Return mock unread count
+    return 2;
+  }
+  
   const { count, error } = await supabase
     .from('user_notifications')
     .select('*', { count: 'exact', head: true })

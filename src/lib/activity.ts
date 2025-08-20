@@ -100,6 +100,31 @@ export const ACTIVITY_TYPES = {
 
 // Get activity summary for dashboard
 export const getActivitySummary = async (userId: string, days = 30) => {
+  // Check if we're in mock mode
+  const isMockMode = !import.meta.env.VITE_SUPABASE_URL || import.meta.env.VITE_USE_MOCK_DB === 'true';
+  
+  if (isMockMode) {
+    // Return mock activity summary
+    return {
+      totalActivities: 25,
+      activityByType: {
+        'link_created': 8,
+        'profile_updated': 3,
+        'login': 12,
+        'link_shared': 2
+      },
+      activityByDate: {
+        '2024-01-15': 5,
+        '2024-01-14': 3,
+        '2024-01-13': 7,
+        '2024-01-12': 4,
+        '2024-01-11': 6
+      },
+      mostActiveDay: '2024-01-13',
+      mostCommonAction: 'login'
+    };
+  }
+  
   const startDate = new Date();
   startDate.setDate(startDate.getDate() - days);
   

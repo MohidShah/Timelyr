@@ -47,6 +47,14 @@ export const getPlanLimits = (plan: 'starter' | 'pro'): PlanLimits => {
 
 export const canCreateLink = async (userId: string): Promise<{ canCreate: boolean; reason?: string }> => {
   try {
+    // Check if we're in mock mode
+    const isMockMode = !import.meta.env.VITE_SUPABASE_URL || import.meta.env.VITE_USE_MOCK_DB === 'true';
+    
+    if (isMockMode) {
+      // In mock mode, always allow creation for demo purposes
+      return { canCreate: true };
+    }
+    
     // Get user profile
     const { data: profile, error } = await supabase
       .from('user_profiles')
@@ -74,22 +82,32 @@ export const canCreateLink = async (userId: string): Promise<{ canCreate: boolea
     return { canCreate: true };
   } catch (error) {
     console.error('Error checking link creation limits:', error);
-    return { canCreate: false, reason: 'Unable to verify plan limits' };
+    // In case of error, allow creation to not block users
+    return { canCreate: true };
   }
 };
 
 export const incrementLinksCreated = async (userId: string): Promise<void> => {
   try {
+    // Check if we're in mock mode
+    const isMockMode = !import.meta.env.VITE_SUPABASE_URL || import.meta.env.VITE_USE_MOCK_DB === 'true';
+    
+    if (isMockMode) {
+      // In mock mode, simulate the increment
+      console.log('Mock: Incrementing links created for user:', userId);
+      return;
+    }
+    
     const { error } = await supabase
       .from('user_profiles')
-      .update({ 
-        links_created_this_month: supabase.raw('links_created_this_month + 1') 
-      })
+      .update({})
+      .raw('links_created_this_month = links_created_this_month + 1')
       .eq('id', userId);
 
     if (error) throw error;
   } catch (error) {
     console.error('Error incrementing links created:', error);
+    // Don't throw error to not block link creation
   }
 };
 

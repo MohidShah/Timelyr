@@ -33,6 +33,25 @@ export const createSupportTicket = async (userId: string, ticket: {
   category?: 'technical' | 'billing' | 'feature_request' | 'bug_report';
   priority?: 'low' | 'medium' | 'high' | 'urgent';
 }) => {
+  // Check if we're in mock mode
+  const isMockMode = !import.meta.env.VITE_SUPABASE_URL || import.meta.env.VITE_USE_MOCK_DB === 'true';
+  
+  if (isMockMode) {
+    // Return mock ticket data
+    const mockTicket = {
+      id: `ticket-${Date.now()}`,
+      user_id: userId,
+      ...ticket,
+      priority: ticket.priority || 'medium',
+      status: 'open' as const,
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString()
+    };
+    
+    console.log('Mock: Support ticket created:', mockTicket);
+    return mockTicket;
+  }
+  
   const { data, error } = await supabase
     .from('support_tickets')
     .insert({
@@ -112,6 +131,24 @@ export const submitFeedback = async (userId: string, feedback: {
   message: string;
   page_url: string;
 }) => {
+  // Check if we're in mock mode
+  const isMockMode = !import.meta.env.VITE_SUPABASE_URL || import.meta.env.VITE_USE_MOCK_DB === 'true';
+  
+  if (isMockMode) {
+    // Return mock feedback data
+    const mockFeedback = {
+      id: `feedback-${Date.now()}`,
+      user_id: userId,
+      ...feedback,
+      user_agent: navigator.userAgent,
+      status: 'open' as const,
+      created_at: new Date().toISOString()
+    };
+    
+    console.log('Mock: Feedback submitted:', mockFeedback);
+    return mockFeedback;
+  }
+  
   const { data, error } = await supabase
     .from('user_feedback')
     .insert({

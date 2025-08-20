@@ -97,7 +97,29 @@ export const EnhancedProfilePage: React.FC = () => {
       setProfile(userProfile);
       
       // Fetch preferences
-      const userPreferences = await getUserPreferences(user.id);
+      let userPreferences = await getUserPreferences(user.id);
+      if (!userPreferences) {
+        // Create default preferences if none exist
+        userPreferences = await updateUserPreferences(user.id, {
+          notification_email: true,
+          notification_browser: true,
+          marketing_emails: false,
+          weekly_digest: true,
+          theme: 'light' as const,
+          language: 'en',
+          dashboard_layout: {
+            sidebar_collapsed: false,
+            default_view: 'grid',
+            items_per_page: 12,
+            show_analytics_widget: true,
+            show_business_hours_widget: true
+          },
+          reduce_motion: false,
+          high_contrast: false,
+          large_text: false,
+          pwa_installed: false
+        });
+      }
       setPreferences(userPreferences);
       
       // Apply preferences to DOM

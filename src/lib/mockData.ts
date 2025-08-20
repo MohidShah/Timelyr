@@ -395,7 +395,7 @@ export const generateMockAnalyticsData = (days: number = 30) => {
     // Generate realistic view patterns (more views on weekdays)
     const dayOfWeek = subDays(new Date(), i).getDay();
     const isWeekend = dayOfWeek === 0 || dayOfWeek === 6;
-    const baseViews = isWeekend ? Math.floor(Math.random() * 5) : Math.floor(Math.random() * 15) + 5;
+    const baseViews = isWeekend ? Math.floor(Math.random() * 8) + 2 : Math.floor(Math.random() * 20) + 8;
     data[date] = baseViews;
   }
   

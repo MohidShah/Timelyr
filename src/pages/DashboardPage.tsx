@@ -154,8 +154,13 @@ export const DashboardPage: React.FC = () => {
 
       setShowCreateForm(false);
       fetchDashboardData(); // Refresh data
+      
+      // Show success message or redirect to the new link
+      console.log('Link created successfully:', data);
     } catch (error) {
       console.error('Error creating link:', error);
+      // Show error message to user
+      alert('Failed to create link. Please try again.');
     }
   };
 

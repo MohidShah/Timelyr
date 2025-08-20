@@ -10,7 +10,8 @@ import {
   Calendar,
   Clock,
   Globe,
-  Share2
+  Share2,
+  QrCode
 } from 'lucide-react';
 import { format } from 'date-fns';
 import { formatInTimezone, getUserTimezone } from '../../lib/timezone';
