@@ -12,7 +12,10 @@ import {
   Shield,
   Bell,
   Globe,
-  AlertTriangle
+  AlertTriangle,
+  AlertCircle,
+  RefreshCcw,
+  Loader2
 } from 'lucide-react';
 import { Button } from '../ui/Button';
 import { Input } from '../ui/Input';
@@ -46,6 +49,7 @@ export const ProfileSettings: React.FC<ProfileSettingsProps> = ({
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
   const [showPasswordDialog, setShowPasswordDialog] = useState(false);
   const [showEmailDialog, setShowEmailDialog] = useState(false);
+  const [error, setError] = useState<string | null>(null);
   
   const [formData, setFormData] = useState({
     display_name: userProfile?.display_name || '',
@@ -105,6 +109,7 @@ export const ProfileSettings: React.FC<ProfileSettingsProps> = ({
   const handleSaveField = async (field: string) => {
     setSaving(true);
     setErrors({});
+    setError(null);
 
     try {
       if (!user) return;
@@ -130,9 +135,13 @@ export const ProfileSettings: React.FC<ProfileSettingsProps> = ({
       
       // Log activity
       await logUserActivity(user.id, 'profile_updated', { field, value: updates[field as keyof UserProfile] });
+      
+      // Show success message
+      alert(`${field.replace('_', ' ')} updated successfully`);
     } catch (error: any) {
       console.error('Error updating profile:', error);
       setErrors({ [field]: error.message });
+      setError(`Failed to update ${field.replace('_', ' ')}. Please try again.`);
     } finally {
       setSaving(false);
     }
@@ -141,6 +150,9 @@ export const ProfileSettings: React.FC<ProfileSettingsProps> = ({
   const handleAvatarUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (!file || !user) return;
+    
+    setLoading(true);
+    setError(null);
 
     try {
       setSaving(true);
@@ -153,13 +165,18 @@ export const ProfileSettings: React.FC<ProfileSettingsProps> = ({
     } catch (error) {
       console.error('Error uploading avatar:', error);
       setErrors({ avatar: 'Failed to upload avatar' });
+      setError('Error uploading avatar. Please try again.');
     } finally {
       setSaving(false);
+      setLoading(false);
     }
   };
 
   const handleRemoveAvatar = async () => {
     if (!user) return;
+    
+    setLoading(true);
+    setError(null);
 
     try {
       setSaving(true);
@@ -170,8 +187,10 @@ export const ProfileSettings: React.FC<ProfileSettingsProps> = ({
       await logUserActivity(user.id, 'avatar_removed', {});
     } catch (error) {
       console.error('Error removing avatar:', error);
+      setError('Error removing avatar. Please try again.');
     } finally {
       setSaving(false);
+      setLoading(false);
     }
   };
 
@@ -179,6 +198,7 @@ export const ProfileSettings: React.FC<ProfileSettingsProps> = ({
     if (!user) return;
 
     setErrors({});
+    setError(null);
 
     // Validation
     if (passwordData.newPassword !== passwordData.confirmPassword) {
@@ -211,6 +231,7 @@ export const ProfileSettings: React.FC<ProfileSettingsProps> = ({
       alert('Password updated successfully');
     } catch (error: any) {
       setErrors({ password: error.message });
+      setError(`Failed to update password: ${error.message}`);
     } finally {
       setSaving(false);
     }
@@ -220,6 +241,7 @@ export const ProfileSettings: React.FC<ProfileSettingsProps> = ({
     if (!user) return;
 
     setErrors({});
+    setError(null);
 
     try {
       setSaving(true);
@@ -241,6 +263,7 @@ export const ProfileSettings: React.FC<ProfileSettingsProps> = ({
       alert('Email update initiated. Please check your new email for verification.');
     } catch (error: any) {
       setErrors({ email: error.message });
+      setError(`Failed to update email: ${error.message}`);
     } finally {
       setSaving(false);
     }
@@ -308,12 +331,17 @@ export const ProfileSettings: React.FC<ProfileSettingsProps> = ({
               />
             )}
             <Button
-              size="sm"
-              onClick={() => handleSaveField(field)}
-              loading={saving}
-            >
-              <Check className="w-4 h-4" />
-            </Button>
+                size="sm"
+                onClick={() => handleSaveField(field)}
+                loading={saving}
+                disabled={saving}
+              >
+                {saving ? (
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                ) : (
+                  <Check className="w-4 h-4" />
+                )}
+              </Button>
             <Button
               variant="tertiary"
               size="sm"
@@ -360,64 +388,70 @@ export const ProfileSettings: React.FC<ProfileSettingsProps> = ({
     return 'Strong';
   };
 
+  // Error message component
+  const ErrorMessage = ({ message }: { message: string }) => (
+    <div className="flex items-center p-4 mb-4 text-sm text-red-800 rounded-lg bg-red-50">
+      <AlertCircle className="w-5 h-5 mr-2" />
+      <span>{message}</span>
+      <button 
+        onClick={() => setError(null)}
+        className="ml-auto text-red-600 hover:text-red-800"
+      >
+        <X className="w-4 h-4" />
+      </button>
+    </div>
+  );
+
   return (
     <div className="space-y-6">
-      {/* Profile Picture Section */}
+      {error && <ErrorMessage message={error} />}
+      {/* Profile Information */}
       <Card>
         <CardHeader>
-          <h2 className="text-xl font-semibold text-gray-800">Profile Picture</h2>
+          <h2 className="text-xl font-semibold text-gray-800 flex items-center">
+            <User className="w-5 h-5 mr-2 text-blue-600" />
+            Profile Information
+          </h2>
         </CardHeader>
-        <CardContent className="flex items-center space-x-6">
-          <div className="relative">
-            <div className="w-24 h-24 bg-blue-100 rounded-full flex items-center justify-center overflow-hidden">
-              {userProfile?.avatar_url ? (
-                <img 
-                  src={userProfile.avatar_url} 
-                  alt="Avatar" 
-                  className="w-24 h-24 object-cover"
-                />
-              ) : (
-                <User className="w-12 h-12 text-blue-600" />
-              )}
-            </div>
-            <label className="absolute bottom-0 right-0 w-8 h-8 bg-blue-600 text-white rounded-full flex items-center justify-center hover:bg-blue-700 transition-colors cursor-pointer">
-              <Camera className="w-4 h-4" />
-              <input
-                type="file"
-                accept="image/*"
-                onChange={handleAvatarUpload}
-                className="hidden"
-              />
-            </label>
-          </div>
-          <div className="flex-1">
-            <h3 className="font-medium text-gray-800 mb-2">Upload a new picture</h3>
-            <p className="text-sm text-gray-600 mb-4">
-              JPG, PNG or GIF. Max size 5MB. Recommended 400x400px.
-            </p>
-            <div className="flex space-x-2">
-              <label>
-                <Button variant="secondary" size="sm" disabled={saving}>
-                  <Camera className="w-4 h-4 mr-2" />
-                  Upload New
-                </Button>
-                <input
-                  type="file"
+        <CardContent className="space-y-6">
+          {/* Avatar */}
+          <div className="flex items-center space-x-4">
+            <div className="relative">
+              <div className="w-20 h-20 rounded-full bg-gray-100 flex items-center justify-center overflow-hidden border-2 border-gray-200">
+                {loading ? (
+                  <Loader2 className="w-8 h-8 text-blue-600 animate-spin" />
+                ) : userProfile?.avatar_url ? (
+                  <img 
+                    src={userProfile.avatar_url} 
+                    alt="Profile" 
+                    className="w-full h-full object-cover"
+                  />
+                ) : (
+                  <User className="w-8 h-8 text-gray-400" />
+                )}
+              </div>
+              <label htmlFor="avatar-upload" className={`absolute -bottom-1 -right-1 bg-blue-600 text-white p-1.5 rounded-full cursor-pointer hover:bg-blue-700 transition-colors ${loading ? 'opacity-50 cursor-not-allowed' : ''}`}>
+                <Camera className="w-4 h-4" />
+                <input 
+                  type="file" 
+                  id="avatar-upload" 
+                  className="hidden" 
                   accept="image/*"
                   onChange={handleAvatarUpload}
-                  className="hidden"
+                  disabled={loading}
                 />
               </label>
+            </div>
+            <div>
+              <h3 className="font-medium text-gray-900">{formData.display_name || user?.email?.split('@')[0]}</h3>
+              <p className="text-sm text-gray-500">{user?.email}</p>
               {userProfile?.avatar_url && (
-                <Button 
-                  variant="tertiary" 
-                  size="sm" 
+                <button 
                   onClick={handleRemoveAvatar}
-                  disabled={saving}
+                  className="text-sm text-red-600 hover:text-red-800 mt-1"
                 >
-                  <Trash2 className="w-4 h-4 mr-2" />
-                  Remove
-                </Button>
+                  Remove photo
+                </button>
               )}
             </div>
           </div>

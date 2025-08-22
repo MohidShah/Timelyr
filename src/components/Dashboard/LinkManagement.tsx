@@ -15,7 +15,8 @@ import {
   Trash2,
   ExternalLink,
   Share2,
-  MoreHorizontal
+  MoreHorizontal,
+  AlertCircle
 } from 'lucide-react';
 import { format, isAfter, isBefore, startOfDay, endOfDay } from 'date-fns';
 import { LinkCard } from './LinkCard';
@@ -57,15 +58,21 @@ export const LinkManagement: React.FC<LinkManagementProps> = ({
   const [selectedLink, setSelectedLink] = useState<TimezoneLink | null>(null);
   
   const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [actionInProgress, setActionInProgress] = useState<'creating' | 'updating' | 'deleting' | null>(null);
 
   const handleCreateLink = async (date: Date, timezone: string, title: string, description?: string) => {
     try {
+      setError(null);
+      setLoading(true);
+      setActionInProgress('creating');
+      
       if (!user) return;
 
       // Check if user can create more links
       const { canCreate, reason } = await canCreateLink(user.id);
       if (!canCreate) {
-        alert(reason);
+        setError(reason ? reason : 'Unable to create link');
         return;
       }
 
@@ -103,7 +110,10 @@ export const LinkManagement: React.FC<LinkManagementProps> = ({
       onLinksUpdate();
     } catch (error) {
       console.error('Error creating link:', error);
-      alert('Failed to create link. Please try again.');
+      setError('Failed to create link. Please try again.');
+    } finally {
+      setLoading(false);
+      setActionInProgress(null);
     }
   };
 
@@ -111,6 +121,9 @@ export const LinkManagement: React.FC<LinkManagementProps> = ({
     if (!selectedLink) return;
 
     try {
+      setError(null);
+      setLoading(true);
+      setActionInProgress('updating');
       const { error } = await supabase
         .from('timezone_links')
         .update({
@@ -136,12 +149,18 @@ export const LinkManagement: React.FC<LinkManagementProps> = ({
       onLinksUpdate();
     } catch (error) {
       console.error('Error updating link:', error);
-      alert('Failed to update link. Please try again.');
+      setError('Failed to update link. Please try again.');
+    } finally {
+      setLoading(false);
+      setActionInProgress(null);
     }
   };
 
   const handleDeleteLink = async (linkId: string) => {
     try {
+      setError(null);
+      setLoading(true);
+      setActionInProgress('deleting');
       const { error } = await supabase
         .from('timezone_links')
         .delete()
@@ -155,18 +174,25 @@ export const LinkManagement: React.FC<LinkManagementProps> = ({
       onLinksUpdate();
     } catch (error) {
       console.error('Error deleting link:', error);
-      alert('Failed to delete link. Please try again.');
+      setError('Failed to delete link. Please try again.');
+    } finally {
+      setLoading(false);
+      setActionInProgress(null);
     }
   };
 
   const handleDuplicateLink = async (link: TimezoneLink) => {
     try {
+      setError(null);
+      setLoading(true);
+      setActionInProgress('creating');
+      
       if (!user) return;
       
       // Check if user can create more links
       const { canCreate, reason } = await canCreateLink(user.id);
       if (!canCreate) {
-        alert(reason);
+        setError(reason);
         return;
       }
       
@@ -200,12 +226,18 @@ export const LinkManagement: React.FC<LinkManagementProps> = ({
       onLinksUpdate();
     } catch (error) {
       console.error('Error duplicating link:', error);
-      alert('Failed to duplicate link. Please try again.');
+      setError('Failed to duplicate link. Please try again.');
+    } finally {
+      setLoading(false);
+      setActionInProgress(null);
     }
   };
 
   const handleToggleStatus = async (linkId: string, isActive: boolean) => {
     try {
+      setError(null);
+      setLoading(true);
+      
       const { error } = await supabase
         .from('timezone_links')
         .update({ is_active: !isActive })
@@ -219,6 +251,9 @@ export const LinkManagement: React.FC<LinkManagementProps> = ({
       onLinksUpdate();
     } catch (error) {
       console.error('Error toggling link status:', error);
+      setError('Failed to update link status. Please try again.');
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -346,8 +381,36 @@ END:VCALENDAR`;
     };
   }, [links]);
 
+  // Error display component
+  const ErrorMessage = ({ message, onDismiss }: { message: string, onDismiss: () => void }) => (
+    <div className="bg-red-50 border-l-4 border-red-400 p-4 mb-4 rounded">
+      <div className="flex items-start">
+        <div className="flex-shrink-0">
+          <AlertCircle className="h-5 w-5 text-red-400" />
+        </div>
+        <div className="ml-3">
+          <p className="text-sm text-red-700">{message}</p>
+        </div>
+        <button 
+          onClick={onDismiss}
+          className="ml-auto pl-3"
+        >
+          <span className="text-red-500 hover:text-red-600 text-sm">Dismiss</span>
+        </button>
+      </div>
+    </div>
+  );
+
   return (
     <div className="space-y-6">
+      {/* Error Message */}
+      {error && (
+        <ErrorMessage 
+          message={error} 
+          onDismiss={() => setError(null)} 
+        />
+      )}
+      
       {/* Header with Stats */}
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
         <Card>
@@ -522,13 +585,27 @@ END:VCALENDAR`;
       {/* Create Link Modal */}
       <Modal
         isOpen={showCreateModal}
-        onClose={() => setShowCreateModal(false)}
+        onClose={() => {
+          if (!loading || !actionInProgress) {
+            setShowCreateModal(false);
+            setError(null);
+          }
+        }}
         title="Create New Timezone Link"
         maxWidth="lg"
       >
+        {error && (
+          <div className="mb-4">
+            <ErrorMessage 
+              message={error} 
+              onDismiss={() => setError(null)} 
+            />
+          </div>
+        )}
         <TimeInput 
           onTimeSelect={handleCreateLink} 
           userPlan={userProfile?.plan as 'starter' | 'pro' || 'starter'}
+          loading={loading && actionInProgress === 'creating'}
         />
       </Modal>
 

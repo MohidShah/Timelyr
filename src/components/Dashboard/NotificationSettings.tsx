@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Bell, Mail, Globe, Smartphone, Clock, Shield, Save } from 'lucide-react';
+import { Bell, Mail, Globe, Smartphone, Clock, Shield, Save, AlertCircle, X, RefreshCcw, Loader2 } from 'lucide-react';
 import { Button } from '../ui/Button';
 import { Card, CardContent, CardHeader } from '../ui/Card';
 import { 
@@ -25,12 +25,15 @@ export const NotificationSettings: React.FC<NotificationSettingsProps> = ({ user
   });
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     fetchPreferences();
   }, [userId]);
 
   const fetchPreferences = async () => {
+    setLoading(true);
+    setError(null);
     try {
       const prefs = await getNotificationPreferences(userId);
       if (prefs) {
@@ -45,8 +48,9 @@ export const NotificationSettings: React.FC<NotificationSettingsProps> = ({ user
           feature_announcements: true,
         });
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error fetching notification preferences:', error);
+      setError('Failed to load notification preferences. ' + (error.message || 'Please try again.'));
     } finally {
       setLoading(false);
     }
@@ -55,6 +59,7 @@ export const NotificationSettings: React.FC<NotificationSettingsProps> = ({ user
   const handleSave = async () => {
     try {
       setSaving(true);
+      setError(null);
       await updateNotificationPreferences(userId, preferences);
       
       // Log activity
@@ -62,11 +67,9 @@ export const NotificationSettings: React.FC<NotificationSettingsProps> = ({ user
         type: 'notifications',
         preferences 
       });
-      
-      alert('Notification preferences saved successfully!');
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error saving preferences:', error);
-      alert('Failed to save preferences. Please try again.');
+      setError('Failed to save preferences. ' + (error.message || 'Please try again.'));
     } finally {
       setSaving(false);
     }
@@ -79,10 +82,25 @@ export const NotificationSettings: React.FC<NotificationSettingsProps> = ({ user
     }));
   };
 
+  // Error message component
+  const ErrorMessage = ({ message }: { message: string }) => (
+    <div className="flex items-center p-4 mb-4 text-sm text-red-800 rounded-lg bg-red-50">
+      <AlertCircle className="w-5 h-5 mr-2" />
+      <span>{message}</span>
+      <button 
+        onClick={() => setError(null)}
+        className="ml-auto text-red-600 hover:text-red-800"
+      >
+        <X className="w-4 h-4" />
+      </button>
+    </div>
+  );
+
   if (loading) {
     return (
-      <div className="flex items-center justify-center h-64">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
+      <div className="flex flex-col items-center justify-center h-64">
+        <Loader2 className="w-12 h-12 text-blue-600 animate-spin mb-4" />
+        <p className="text-gray-600">Loading notification settings...</p>
       </div>
     );
   }
@@ -164,6 +182,7 @@ export const NotificationSettings: React.FC<NotificationSettingsProps> = ({ user
 
   return (
     <div className="space-y-6">
+      {error && <ErrorMessage message={error} />}
       <div className="flex items-center justify-between">
         <div>
           <h2 className="text-2xl font-bold text-gray-900">Notification Settings</h2>
@@ -171,10 +190,29 @@ export const NotificationSettings: React.FC<NotificationSettingsProps> = ({ user
             Manage how and when you receive notifications from Timelyr
           </p>
         </div>
-        <Button onClick={handleSave} loading={saving}>
-          <Save className="w-4 h-4 mr-2" />
-          Save Changes
-        </Button>
+        <div className="flex space-x-2">
+          <Button onClick={handleSave} loading={saving} disabled={saving}>
+            {saving ? (
+              <>
+                <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                Saving...
+              </>
+            ) : (
+              <>
+                <Save className="w-4 h-4 mr-2" />
+                Save Changes
+              </>
+            )}
+          </Button>
+          <Button 
+            variant="tertiary" 
+            onClick={fetchPreferences} 
+            disabled={loading || saving}
+          >
+            <RefreshCcw className="w-4 h-4 mr-2" />
+            Refresh
+          </Button>
+        </div>
       </div>
 
       {notificationTypes.map((category, categoryIndex) => (

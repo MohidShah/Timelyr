@@ -4,7 +4,7 @@ import { Input } from './ui/Input';
 import { Card, CardContent, CardHeader } from './ui/Card';
 import { parseNaturalLanguage, getUserTimezone } from '../lib/timezone';
 import { format, addDays, setHours, setMinutes } from 'date-fns';
-import { Clock, Calendar, Globe, MapPin } from 'lucide-react';
+import { Clock, Calendar, Globe, MapPin, Loader2 } from 'lucide-react';
 
 interface TimeInputProps {
   onTimeSelect: (date: Date, timezone: string, title: string, description?: string) => void;
@@ -35,6 +35,7 @@ export const TimeInput: React.FC<TimeInputProps> = ({ onTimeSelect, initialData,
   const [useAutoDetection, setUseAutoDetection] = useState(true);
   const [showCustomSlugInput, setShowCustomSlugInput] = useState(false);
   const [customSlug, setCustomSlug] = useState('');
+  const [loading, setLoading] = useState(false);
 
   useEffect(() => {
     if (naturalInput) {
@@ -52,7 +53,7 @@ export const TimeInput: React.FC<TimeInputProps> = ({ onTimeSelect, initialData,
   };
 
   const handleGuidedSubmit = () => {
-    if (selectedDate && selectedTime && title) {
+    if (selectedDate && selectedTime && title && !loading) {
       const [hours, minutes] = selectedTime.split(':').map(Number);
       const date = new Date(selectedDate);
       const finalDate = setHours(setMinutes(date, minutes), hours);
@@ -228,11 +229,18 @@ export const TimeInput: React.FC<TimeInputProps> = ({ onTimeSelect, initialData,
             </div>
             <Button
               onClick={handleNaturalSubmit}
-              disabled={!parsedTime || !title}
+              disabled={!parsedTime || !title || loading}
               className="w-full"
               size="lg"
             >
-              Create Timezone Link
+              {loading ? (
+                <>
+                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                  Creating...
+                </>
+              ) : (
+                'Create Timezone Link'
+              )}
             </Button>
           </div>
         ) : (
@@ -298,11 +306,18 @@ export const TimeInput: React.FC<TimeInputProps> = ({ onTimeSelect, initialData,
 
             <Button
               onClick={handleGuidedSubmit}
-              disabled={!selectedDate || !selectedTime || !title}
+              disabled={!selectedDate || !selectedTime || !title || loading}
               className="w-full"
               size="lg"
             >
-              Create Timezone Link
+              {loading ? (
+                <>
+                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                  Creating...
+                </>
+              ) : (
+                'Create Timezone Link'
+              )}
             </Button>
           </div>
         )}

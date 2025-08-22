@@ -44,7 +44,7 @@ import {
   updateAccessibilitySettings,
   applyPreferencesToDOM
 } from '../../lib/preferences';
-import { getUserActivityHistory, getActivitySummary } from '../../lib/activity';
+import { getUserActivityHistory, getActivitySummary, logUserActivity } from '../../lib/activity';
 import { getNotificationPreferences, updateNotificationPreferences } from '../../lib/notifications';
 import { supabase } from '../../lib/supabase';
 import type { UserProfile } from '../../lib/supabase';
@@ -192,8 +192,108 @@ export const EnhancedProfilePage: React.FC = () => {
       setSaving(true);
       const avatarUrl = await uploadAvatar(user.id, file);
       setProfile(prev => prev ? { ...prev, avatar_url: avatarUrl } : null);
+      
+      // Log activity
+      await logUserActivity(user.id, 'avatar_updated', { avatar_url: avatarUrl });
+      
+      // Show success message
+      alert('Profile picture updated successfully');
     } catch (error) {
       console.error('Error uploading avatar:', error);
+      alert('Failed to upload profile picture. Please try again.');
+    } finally {
+      setSaving(false);
+    }
+  };
+  
+  const handleRemoveAvatar = async () => {
+    if (!user) return;
+
+    try {
+      setSaving(true);
+      const updatedProfile = await updateUserProfile(user.id, { avatar_url: null });
+      setProfile(updatedProfile);
+      
+      // Log activity
+      await logUserActivity(user.id, 'avatar_removed', {});
+      
+      // Show success message
+      alert('Profile picture removed successfully');
+    } catch (error) {
+      console.error('Error removing avatar:', error);
+      alert('Failed to remove profile picture. Please try again.');
+    } finally {
+      setSaving(false);
+    }
+  };
+  
+  const handleUpdatePreferences = async (updates: Partial<any>) => {
+    if (!user) return;
+    
+    try {
+      setSaving(true);
+      const updatedPreferences = await updateUserPreferences(user.id, updates);
+      setPreferences(updatedPreferences);
+      
+      // Apply preferences to DOM
+      applyPreferencesToDOM(updatedPreferences);
+      
+      // Log activity
+      await logUserActivity(user.id, 'preferences_updated', { updates });
+      
+      // Show success message
+      alert('Preferences updated successfully');
+    } catch (error) {
+      console.error('Error updating preferences:', error);
+      alert('Failed to update preferences. Please try again.');
+    } finally {
+      setSaving(false);
+    }
+  };
+  
+  const handleUpdateAccessibility = async (updates: Partial<any>) => {
+    if (!user) return;
+    
+    try {
+      setSaving(true);
+      const updatedSettings = await updateAccessibilitySettings(user.id, updates);
+      setPreferences(prev => ({ ...prev, ...updatedSettings }));
+      
+      // Apply settings to DOM
+      applyPreferencesToDOM({ ...preferences, ...updatedSettings });
+      
+      // Log activity
+      await logUserActivity(user.id, 'accessibility_updated', { updates });
+      
+      // Show success message
+      alert('Accessibility settings updated successfully');
+    } catch (error) {
+      console.error('Error updating accessibility settings:', error);
+      alert('Failed to update accessibility settings. Please try again.');
+    } finally {
+      setSaving(false);
+    }
+  };
+  
+  const handleUpdateTheme = async (theme: 'light' | 'dark' | 'system') => {
+    if (!user) return;
+    
+    try {
+      setSaving(true);
+      const updatedTheme = await updateTheme(user.id, theme);
+      setPreferences(prev => ({ ...prev, theme: updatedTheme }));
+      
+      // Apply theme to DOM
+      applyPreferencesToDOM({ ...preferences, theme: updatedTheme });
+      
+      // Log activity
+      await logUserActivity(user.id, 'theme_updated', { theme: updatedTheme });
+      
+      // Show success message
+      alert(`Theme updated to ${theme} mode`);
+    } catch (error) {
+      console.error('Error updating theme:', error);
+      alert('Failed to update theme. Please try again.');
     } finally {
       setSaving(false);
     }
@@ -537,7 +637,7 @@ export const EnhancedProfilePage: React.FC = () => {
                         ].map((theme) => (
                           <button
                             key={theme.value}
-                            onClick={() => handleThemeChange(theme.value as any)}
+                            onClick={() => handleUpdateTheme(theme.value as any)}
                             className={`p-4 border-2 rounded-lg text-center transition-colors ${
                               preferences?.theme === theme.value
                                 ? 'border-blue-500 bg-blue-50'
@@ -587,13 +687,172 @@ export const EnhancedProfilePage: React.FC = () => {
                           <input
                             type="checkbox"
                             checked={preferences?.[setting.key] || false}
-                            onChange={(e) => handleAccessibilityChange(setting.key, e.target.checked)}
+                            onChange={(e) => handleUpdateAccessibility({ [setting.key]: e.target.checked })}
                             className="sr-only peer"
                           />
                           <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
                         </label>
                       </div>
                     ))}
+                  </CardContent>
+                </Card>
+              </div>
+            )}
+
+            {activeTab === 'security' && (
+              <div className="space-y-6">
+                <Card>
+                  <CardHeader>
+                    <h2 className="text-xl font-semibold text-gray-800 flex items-center">
+                      <Lock className="w-5 h-5 mr-2" />
+                      Password & Security
+                    </h2>
+                  </CardHeader>
+                  <CardContent className="space-y-6">
+                    <div>
+                      <h3 className="text-md font-medium text-gray-800 mb-3">Change Password</h3>
+                      <p className="text-sm text-gray-600 mb-4">
+                        It's a good idea to use a strong password that you don't use elsewhere
+                      </p>
+                      <Button 
+                        variant="outline" 
+                        className="flex items-center" 
+                        onClick={() => setShowPasswordDialog(true)}
+                      >
+                        <Key className="w-4 h-4 mr-2" />
+                        Change Password
+                      </Button>
+                    </div>
+
+                    <Separator />
+
+                    <div>
+                      <h3 className="text-md font-medium text-gray-800 mb-3">Two-Factor Authentication</h3>
+                      <p className="text-sm text-gray-600 mb-4">
+                        Add an extra layer of security to your account
+                      </p>
+                      <Button 
+                        variant="outline" 
+                        className="flex items-center"
+                        onClick={() => alert('Two-factor authentication setup will be available soon')}
+                      >
+                        <ShieldCheck className="w-4 h-4 mr-2" />
+                        Setup 2FA
+                      </Button>
+                    </div>
+
+                    <Separator />
+
+                    <div>
+                      <h3 className="text-md font-medium text-gray-800 mb-3">Active Sessions</h3>
+                      <p className="text-sm text-gray-600 mb-4">
+                        Manage devices where you're currently logged in
+                      </p>
+                      <div className="space-y-3">
+                        <div className="p-3 bg-gray-50 rounded-lg flex justify-between items-center">
+                          <div className="flex items-center">
+                            <Monitor className="w-5 h-5 text-gray-500 mr-3" />
+                            <div>
+                              <p className="text-sm font-medium text-gray-800">Current Device</p>
+                              <p className="text-xs text-gray-500">Last active: Just now</p>
+                            </div>
+                          </div>
+                          <Badge variant="outline" className="text-green-600 bg-green-50">Current</Badge>
+                        </div>
+                      </div>
+                    </div>
+
+                    <Separator />
+
+                    <div>
+                      <h3 className="text-md font-medium text-gray-800 mb-3">Account Deletion</h3>
+                      <p className="text-sm text-gray-600 mb-4">
+                        Permanently delete your account and all of your content
+                      </p>
+                      <Button 
+                        variant="destructive" 
+                        className="flex items-center"
+                        onClick={() => setShowDeleteDialog(true)}
+                      >
+                        <Trash2 className="w-4 h-4 mr-2" />
+                        Delete Account
+                      </Button>
+                    </div>
+                  </CardContent>
+                </Card>
+              </div>
+            )}
+
+            {activeTab === 'notifications' && (
+              <div className="space-y-6">
+                <Card>
+                  <CardHeader>
+                    <h2 className="text-xl font-semibold text-gray-800 flex items-center">
+                      <Bell className="w-5 h-5 mr-2" />
+                      Notification Preferences
+                    </h2>
+                  </CardHeader>
+                  <CardContent className="space-y-6">
+                    <div className="space-y-4">
+                      {[
+                        {
+                          key: 'email_notifications',
+                          label: 'Email Notifications',
+                          description: 'Receive notifications via email'
+                        },
+                        {
+                          key: 'browser_notifications',
+                          label: 'Browser Notifications',
+                          description: 'Receive notifications in your browser'
+                        },
+                        {
+                          key: 'marketing_emails',
+                          label: 'Marketing Emails',
+                          description: 'Receive marketing and promotional emails'
+                        },
+                        {
+                          key: 'weekly_digest',
+                          label: 'Weekly Digest',
+                          description: 'Receive a weekly summary of your account activity'
+                        },
+                        {
+                          key: 'link_expiring_notifications',
+                          label: 'Link Expiring Notifications',
+                          description: 'Get notified when your links are about to expire'
+                        },
+                        {
+                          key: 'usage_limit_notifications',
+                          label: 'Usage Limit Notifications',
+                          description: 'Get notified when you approach your usage limits'
+                        },
+                        {
+                          key: 'security_alerts',
+                          label: 'Security Alerts',
+                          description: 'Get notified about important security events'
+                        },
+                        {
+                          key: 'feature_announcements',
+                          label: 'Feature Announcements',
+                          description: 'Get notified about new features and updates'
+                        }
+                      ].map((notification) => (
+                        <div key={notification.key} className="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
+                          <div>
+                            <h4 className="font-medium text-gray-800">{notification.label}</h4>
+                            <p className="text-sm text-gray-600">{notification.description}</p>
+                          </div>
+                          <label className="relative inline-flex items-center cursor-pointer">
+                            <input
+                              type="checkbox"
+                              checked={preferences?.[notification.key] || false}
+                              onChange={(e) => handleUpdatePreferences({ [notification.key]: e.target.checked })}
+                              className="sr-only peer"
+                            />
+                            <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
+                          </label>
+                        </div>
+                      ))}
+                    </div>
                   </CardContent>
                 </Card>
               </div>

@@ -32,8 +32,15 @@ export const DashboardLayout: React.FC<DashboardLayoutProps> = ({ user, userProf
   const navigation = [
     { name: 'Dashboard', href: '/dashboard', icon: Home },
     { name: 'Analytics', href: '/dashboard/analytics', icon: BarChart3 },
+    { name: 'My Links', href: '/dashboard/links', icon: LinkIcon },
     { name: 'Activity', href: '/dashboard/activity', icon: Activity },
+    { name: 'Settings', href: '/dashboard/settings', icon: Settings },
     { name: 'Profile', href: '/profile', icon: User },
+  ];
+  
+  const secondaryNavigation = [
+    { name: 'Help & Support', href: '/support', icon: HelpCircle },
+    { name: 'Notifications', href: '/notifications', icon: Bell },
   ];
 
   const isActive = (href: string) => {
@@ -100,9 +107,37 @@ export const DashboardLayout: React.FC<DashboardLayoutProps> = ({ user, userProf
             </div>
           </div>
 
-          {/* Navigation */}
+          {/* Primary Navigation */}
           <nav className="flex-1 p-4 space-y-1">
+            <div className="mb-2">
+              <h3 className="px-3 text-xs font-semibold text-gray-500 uppercase tracking-wider">Main</h3>
+            </div>
             {navigation.map((item) => {
+              const active = isActive(item.href);
+              return (
+                <Link
+                  key={item.name}
+                  to={item.href}
+                  onClick={() => setSidebarOpen(false)}
+                  className={`
+                    flex items-center px-3 py-2 text-sm font-medium rounded-lg transition-colors
+                    ${active 
+                      ? 'bg-blue-50 text-blue-700 border-r-2 border-blue-700' 
+                      : 'text-gray-600 hover:text-gray-800 hover:bg-gray-50'
+                    }
+                  `}
+                >
+                  <item.icon className={`w-5 h-5 mr-3 ${active ? 'text-blue-700' : 'text-gray-400'}`} />
+                  {item.name}
+                </Link>
+              );
+            })}
+            
+            {/* Secondary Navigation */}
+            <div className="mt-8 mb-2">
+              <h3 className="px-3 text-xs font-semibold text-gray-500 uppercase tracking-wider">Support</h3>
+            </div>
+            {secondaryNavigation.map((item) => {
               const active = isActive(item.href);
               return (
                 <Link
@@ -130,12 +165,24 @@ export const DashboardLayout: React.FC<DashboardLayoutProps> = ({ user, userProf
               <h4 className="text-xs font-medium text-gray-500 uppercase tracking-wide mb-2">
                 This Month
               </h4>
-              <div className="space-y-1">
+              <div className="space-y-2">
                 <div className="flex justify-between text-sm">
                   <span className="text-gray-600">Links Created</span>
                   <span className="font-medium text-gray-800">
                     {userProfile?.links_created_this_month || 0}
                     {userProfile?.plan === 'starter' && '/50'}
+                  </span>
+                </div>
+                <div className="flex justify-between text-sm">
+                  <span className="text-gray-600">Total Views</span>
+                  <span className="font-medium text-gray-800">
+                    {userProfile?.total_views_this_month || 0}
+                  </span>
+                </div>
+                <div className="flex justify-between text-sm">
+                  <span className="text-gray-600">Active Links</span>
+                  <span className="font-medium text-gray-800">
+                    {userProfile?.active_links || 0}
                   </span>
                 </div>
               </div>
