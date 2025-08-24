@@ -115,27 +115,6 @@ const createMockTable = (tableName: string) => ({
     gte: (column: string, value: any) => createMockQuery(tableName, { [`${column}_gte`]: value }),
     in: (column: string, values: any[]) => createMockQuery(tableName, { [`${column}_in`]: values }),
     neq: (column: string, value: any) => createMockQuery(tableName, { [`${column}_neq`]: value }),
-    
-    // Add direct query execution
-    then: async (callback: any) => {
-      let data;
-      
-      switch (tableName) {
-        case 'timezone_links':
-          data = mockStorage.timezoneLinks;
-          break;
-        case 'user_notifications':
-          data = mockStorage.notifications;
-          break;
-        case 'user_profiles':
-          data = Object.values(mockStorage.userProfiles);
-          break;
-        default:
-          data = [];
-      }
-      
-      return callback({ data, error: null });
-    }
   }),
   
   insert: (data: any) => ({
@@ -213,30 +192,7 @@ const createMockTable = (tableName: string) => ({
           
           return { data: updatedItem, error: null };
         }
-      }),
-      
-      // Add support for update without select
-      then: async (callback: any) => {
-        switch (tableName) {
-          case 'timezone_links':
-            const linkIndex = mockStorage.timezoneLinks.findIndex((l: any) => l[column] === value);
-            if (linkIndex !== -1) {
-              mockStorage.timezoneLinks[linkIndex] = { 
-                ...mockStorage.timezoneLinks[linkIndex], 
-                ...updates, 
-                updated_at: new Date().toISOString() 
-              };
-            }
-            break;
-          case 'user_notifications':
-            mockStorage.notifications = mockStorage.notifications.map((n: any) => 
-              n[column] === value ? { ...n, ...updates } : n
-            );
-            break;
-        }
-        
-        return callback({ error: null });
-      }
+      })
     }),
     
     // Add missing method for raw SQL updates
@@ -282,6 +238,12 @@ const createMockTable = (tableName: string) => ({
             mockStorage.linkAnalytics.push(newItem);
             break;
           case 'user_notifications':
+        }
+      }
+    }
+    )
+  }
+  )
   delete: () => ({
     eq: (column: string, value: any) => ({
       then: async (callback: any) => {
@@ -416,11 +378,7 @@ const createMockQuery = (tableName: string, filters: Record<string, any>) => ({
   maybeSingle: async () => {
     const result = await this.single();
     return result;
-  },
-  
-  // Add support for chaining with other methods
-  order: (column: string, options: any = {}) => createMockOrderedQuery(tableName, column, options),
-  limit: (count: number) => createMockLimitedQuery(tableName, count)
+  }
 });
 
 const createMockOrderedQuery = (tableName: string, column: string, options: any) => ({
@@ -520,10 +478,7 @@ export const createMockSupabaseClient = () => ({
   realtime: {
     channel: mockChannel,
     removeChannel: () => {}
-  },
-  
-  // Add count functionality
-  count: async () => ({ count: 0, error: null })
+  }
 });
 
 // Export mock analytics data generator

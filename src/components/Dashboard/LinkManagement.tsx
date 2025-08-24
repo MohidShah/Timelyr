@@ -588,9 +588,11 @@ END:VCALENDAR`;
       <Modal
         isOpen={showCreateModal}
         onClose={() => {
-          if (!loading || !actionInProgress) {
+          if (!loading && !actionInProgress) {
             setShowCreateModal(false);
             setError(null);
+            setLoading(false);
+            setActionInProgress(null);
           }
         }}
         title="Create New Timezone Link"
@@ -615,12 +617,25 @@ END:VCALENDAR`;
       <Modal
         isOpen={showEditModal}
         onClose={() => {
+          if (!loading && !actionInProgress) {
           setShowEditModal(false);
           setSelectedLink(null);
+            setError(null);
+            setLoading(false);
+            setActionInProgress(null);
+          }
         }}
         title="Edit Timezone Link"
         maxWidth="lg"
       >
+        {error && (
+          <div className="mb-4">
+            <ErrorMessage 
+              message={error} 
+              onDismiss={() => setError(null)} 
+            />
+          </div>
+        )}
         {selectedLink && (
           <TimeInput 
             onTimeSelect={handleEditLink}
@@ -631,6 +646,7 @@ END:VCALENDAR`;
               timezone: selectedLink.timezone
             }}
             userPlan={userProfile?.plan as 'starter' | 'pro' || 'starter'}
+            loading={loading && actionInProgress === 'updating'}
           />
         )}
       </Modal>

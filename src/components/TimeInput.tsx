@@ -15,9 +15,15 @@ interface TimeInputProps {
     timezone: string;
   };
   userPlan?: 'starter' | 'pro';
+  loading?: boolean;
 }
 
-export const TimeInput: React.FC<TimeInputProps> = ({ onTimeSelect, initialData, userPlan = 'starter' }) => {
+export const TimeInput: React.FC<TimeInputProps> = ({ 
+  onTimeSelect, 
+  initialData, 
+  userPlan = 'starter',
+  loading: externalLoading = false
+}) => {
   const [mode, setMode] = useState<'natural' | 'guided'>('natural');
   const [naturalInput, setNaturalInput] = useState('');
   const [title, setTitle] = useState(initialData?.title || '');
@@ -35,11 +41,13 @@ export const TimeInput: React.FC<TimeInputProps> = ({ onTimeSelect, initialData,
   const [useAutoDetection, setUseAutoDetection] = useState(true);
   const [showCustomSlugInput, setShowCustomSlugInput] = useState(false);
   const [customSlug, setCustomSlug] = useState('');
-  const [loading, setLoading] = useState(false);
+  const [internalLoading, setInternalLoading] = useState(false);
+  
+  }, [externalLoading]);
 
   useEffect(() => {
-    if (naturalInput) {
-      const parsed = parseNaturalLanguage(naturalInput);
+    if (!externalLoading) {
+      setInternalLoading(false);
       setParsedTime(parsed);
     } else {
       setParsedTime(null);
@@ -48,14 +56,14 @@ export const TimeInput: React.FC<TimeInputProps> = ({ onTimeSelect, initialData,
 
   const handleNaturalSubmit = () => {
     if (parsedTime && title && !loading) {
-      setLoading(true);
+      setInternalLoading(true);
       onTimeSelect(parsedTime, useAutoDetection ? getUserTimezone() : selectedTimezone, title, description);
     }
   };
 
   const handleGuidedSubmit = () => {
     if (selectedDate && selectedTime && title && !loading) {
-      setLoading(true);
+      setInternalLoading(true);
       const [hours, minutes] = selectedTime.split(':').map(Number);
       const date = new Date(selectedDate);
       const finalDate = setHours(setMinutes(date, minutes), hours);
