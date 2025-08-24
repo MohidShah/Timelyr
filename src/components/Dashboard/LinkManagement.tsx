@@ -90,6 +90,8 @@ export const LinkManagement: React.FC<LinkManagementProps> = ({
           is_active: true,
           expires_at: expirationDate.toISOString(),
           user_id: user?.id,
+          view_count: 0,
+          unique_viewers: 0
         })
         .select()
         .single();

@@ -47,13 +47,15 @@ export const TimeInput: React.FC<TimeInputProps> = ({ onTimeSelect, initialData,
   }, [naturalInput]);
 
   const handleNaturalSubmit = () => {
-    if (parsedTime && title) {
+    if (parsedTime && title && !loading) {
+      setLoading(true);
       onTimeSelect(parsedTime, useAutoDetection ? getUserTimezone() : selectedTimezone, title, description);
     }
   };
 
   const handleGuidedSubmit = () => {
     if (selectedDate && selectedTime && title && !loading) {
+      setLoading(true);
       const [hours, minutes] = selectedTime.split(':').map(Number);
       const date = new Date(selectedDate);
       const finalDate = setHours(setMinutes(date, minutes), hours);

@@ -108,80 +108,34 @@ const mockAuth = {
 // Mock database methods
 const createMockTable = (tableName: string) => ({
   select: (columns = '*') => ({
-    eq: (column: string, value: any) => ({
-      single: async () => {
-        let data;
-        
-        switch (tableName) {
-          case 'user_profiles':
-            data = Object.values(mockStorage.userProfiles).find((p: any) => p[column] === value);
-            break;
-          case 'timezone_links':
-            data = mockStorage.timezoneLinks.find((l: any) => l[column] === value);
-            break;
-          case 'link_analytics':
-            data = mockStorage.linkAnalytics.filter((a: any) => a[column] === value);
-            break;
-          case 'user_notifications':
-            data = mockStorage.notifications.filter((n: any) => n[column] === value);
-            break;
-          case 'user_preferences':
-            data = Object.values(mockStorage.userPreferences).find((p: any) => p[column] === value);
-            break;
-          case 'support_tickets':
-            data = mockStorage.supportTickets.filter((t: any) => t[column] === value);
-            break;
-          case 'user_feedback':
-            data = mockStorage.userFeedback.filter((f: any) => f[column] === value);
-            break;
-          case 'user_activity_log':
-            data = mockStorage.activityLog.filter((a: any) => a[column] === value);
-            break;
-          default:
-            data = null;
-        }
-        
-        return { data, error: null };
-      },
-      
-      maybeSingle: async () => {
-        const result = await this.single();
-        return result;
-      }
-    }),
+    // Add support for multiple filters
+    eq: (column: string, value: any) => createMockQuery(tableName, { [column]: value }),
+    order: (column: string, options: any = {}) => createMockOrderedQuery(tableName, column, options),
+    limit: (count: number) => createMockLimitedQuery(tableName, count),
+    gte: (column: string, value: any) => createMockQuery(tableName, { [`${column}_gte`]: value }),
+    in: (column: string, values: any[]) => createMockQuery(tableName, { [`${column}_in`]: values }),
+    neq: (column: string, value: any) => createMockQuery(tableName, { [`${column}_neq`]: value }),
     
-    order: (column: string, options: any = {}) => ({
-      limit: (count: number) => ({
-        then: async (callback: any) => {
-          let data;
-          
-          switch (tableName) {
-            case 'timezone_links':
-              data = [...mockStorage.timezoneLinks]
-                .sort((a: any, b: any) => {
-                  const aVal = new Date(a[column]).getTime();
-                  const bVal = new Date(b[column]).getTime();
-                  return options.ascending ? aVal - bVal : bVal - aVal;
-                })
-                .slice(0, count);
-              break;
-            case 'user_notifications':
-              data = [...mockStorage.notifications]
-                .sort((a: any, b: any) => {
-                  const aVal = new Date(a[column]).getTime();
-                  const bVal = new Date(b[column]).getTime();
-                  return options.ascending ? aVal - bVal : bVal - aVal;
-                })
-                .slice(0, count);
-              break;
-            default:
-              data = [];
-          }
-          
-          return callback({ data, error: null });
-        }
-      })
-    })
+    // Add direct query execution
+    then: async (callback: any) => {
+      let data;
+      
+      switch (tableName) {
+        case 'timezone_links':
+          data = mockStorage.timezoneLinks;
+          break;
+        case 'user_notifications':
+          data = mockStorage.notifications;
+          break;
+        case 'user_profiles':
+          data = Object.values(mockStorage.userProfiles);
+          break;
+        default:
+          data = [];
+      }
+      
+      return callback({ data, error: null });
+    }
   }),
   
   insert: (data: any) => ({
@@ -259,10 +213,75 @@ const createMockTable = (tableName: string) => ({
           
           return { data: updatedItem, error: null };
         }
+      }),
+      
+      // Add support for update without select
+      then: async (callback: any) => {
+        switch (tableName) {
+          case 'timezone_links':
+            const linkIndex = mockStorage.timezoneLinks.findIndex((l: any) => l[column] === value);
+            if (linkIndex !== -1) {
+              mockStorage.timezoneLinks[linkIndex] = { 
+                ...mockStorage.timezoneLinks[linkIndex], 
+                ...updates, 
+                updated_at: new Date().toISOString() 
+              };
+            }
+            break;
+          case 'user_notifications':
+            mockStorage.notifications = mockStorage.notifications.map((n: any) => 
+              n[column] === value ? { ...n, ...updates } : n
+            );
+            break;
+        }
+        
+        return callback({ error: null });
+      }
+    }),
+    
+    // Add missing method for raw SQL updates
+    raw: (sql: string) => ({
+      eq: (column: string, value: any) => ({
+        then: async (callback: any) => {
+          // Handle raw SQL updates like incrementing counters
+          if (tableName === 'user_profiles' && sql.includes('links_created_this_month')) {
+            const profile = Object.values(mockStorage.userProfiles).find((p: any) => p[column] === value);
+            if (profile) {
+              const updatedProfile = { 
+                ...profile, 
+                links_created_this_month: (profile.links_created_this_month || 0) + 1,
+                updated_at: new Date().toISOString() 
+              };
+              mockStorage.userProfiles[updatedProfile.id] = updatedProfile;
+            }
+          }
+          return callback({ error: null });
+        }
       })
     })
   }),
   
+  insert: (data: any) => ({
+    select: () => ({
+      single: async () => {
+        const newItem = {
+          id: `${tableName}-${Date.now()}`,
+          ...data,
+          created_at: new Date().toISOString(),
+          updated_at: new Date().toISOString()
+        };
+        
+        switch (tableName) {
+          case 'user_profiles':
+            mockStorage.userProfiles[newItem.id] = newItem;
+            break;
+          case 'timezone_links':
+            mockStorage.timezoneLinks.push(newItem);
+            break;
+          case 'link_analytics':
+            mockStorage.linkAnalytics.push(newItem);
+            break;
+          case 'user_notifications':
   delete: () => ({
     eq: (column: string, value: any) => ({
       then: async (callback: any) => {
@@ -283,13 +302,178 @@ const createMockTable = (tableName: string) => ({
   upsert: (data: any) => ({
     select: () => ({
       single: async () => {
-        // For upsert, we'll just treat it as insert for simplicity
-        return this.insert(data).select().single();
+        // For upsert, check if record exists first
+        let existingItem;
+        
+        switch (tableName) {
+          case 'user_preferences':
+            existingItem = Object.values(mockStorage.userPreferences).find((p: any) => p.user_id === data.user_id);
+            if (existingItem) {
+              const updatedItem = { ...existingItem, ...data, updated_at: new Date().toISOString() };
+              mockStorage.userPreferences[data.user_id] = updatedItem;
+              return { data: updatedItem, error: null };
+            } else {
+              const newItem = {
+                id: `${tableName}-${Date.now()}`,
+                ...data,
+                created_at: new Date().toISOString(),
+                updated_at: new Date().toISOString()
+              };
+              mockStorage.userPreferences[data.user_id] = newItem;
+              return { data: newItem, error: null };
+            }
+          default:
+            // Fallback to insert
+            const newItem = {
+              id: `${tableName}-${Date.now()}`,
+              ...data,
+              created_at: new Date().toISOString(),
+              updated_at: new Date().toISOString()
+            };
+            
+            switch (tableName) {
+              case 'user_profiles':
+                mockStorage.userProfiles[newItem.id] = newItem;
+                break;
+              case 'timezone_links':
+                mockStorage.timezoneLinks.push(newItem);
+                break;
+              case 'link_analytics':
+                mockStorage.linkAnalytics.push(newItem);
+                break;
+              case 'user_notifications':
+                mockStorage.notifications.push(newItem);
+                break;
+              case 'support_tickets':
+                mockStorage.supportTickets.push(newItem);
+                break;
+              case 'user_feedback':
+                mockStorage.userFeedback.push(newItem);
+                break;
+              case 'user_activity_log':
+                mockStorage.activityLog.push(newItem);
+                break;
+            }
+            
+            return { data: newItem, error: null };
+        }
+        
+        switch (tableName) {
+          case 'user_preferences':
+            existingItem = Object.values(mockStorage.userPreferences).find((p: any) => p.user_id === data.user_id);
+            if (existingItem) {
+              const updatedItem = { ...existingItem, ...data, updated_at: new Date().toISOString() };
+              mockStorage.userPreferences[data.user_id] = updatedItem;
+              return { data: updatedItem, error: null };
+            } else {
+              const newItem = {
+                id: `${tableName}-${Date.now()}`,
+                ...data,
+                created_at: new Date().toISOString(),
+                updated_at: new Date().toISOString()
+              };
+              mockStorage.userPreferences[data.user_id] = newItem;
+              return { data: newItem, error: null };
+            }
+          default:
+            // Fallback to insert
+            return this.insert(data).select().single();
+        }
       }
     })
   })
 });
 
+// Helper functions for mock queries
+const createMockQuery = (tableName: string, filters: Record<string, any>) => ({
+  single: async () => {
+    let data;
+    
+    switch (tableName) {
+      case 'user_profiles':
+        data = Object.values(mockStorage.userProfiles).find((p: any) => {
+          return Object.entries(filters).every(([key, value]) => {
+            if (key.endsWith('_neq')) {
+              const field = key.replace('_neq', '');
+              return p[field] !== value;
+            }
+            return p[key] === value;
+          });
+        });
+        break;
+      case 'timezone_links':
+        data = mockStorage.timezoneLinks.find((l: any) => {
+          return Object.entries(filters).every(([key, value]) => l[key] === value);
+        });
+        break;
+      default:
+        data = null;
+    }
+    
+    return { data, error: null };
+  },
+  
+  maybeSingle: async () => {
+    const result = await this.single();
+    return result;
+  },
+  
+  // Add support for chaining with other methods
+  order: (column: string, options: any = {}) => createMockOrderedQuery(tableName, column, options),
+  limit: (count: number) => createMockLimitedQuery(tableName, count)
+});
+
+const createMockOrderedQuery = (tableName: string, column: string, options: any) => ({
+  limit: (count: number) => ({
+    then: async (callback: any) => {
+      let data;
+      
+      switch (tableName) {
+        case 'timezone_links':
+          data = [...mockStorage.timezoneLinks]
+            .sort((a: any, b: any) => {
+              const aVal = new Date(a[column]).getTime();
+              const bVal = new Date(b[column]).getTime();
+              return options.ascending ? aVal - bVal : bVal - aVal;
+            })
+            .slice(0, count);
+          break;
+        case 'user_notifications':
+          data = [...mockStorage.notifications]
+            .sort((a: any, b: any) => {
+              const aVal = new Date(a[column]).getTime();
+              const bVal = new Date(b[column]).getTime();
+              return options.ascending ? aVal - bVal : bVal - aVal;
+            })
+            .slice(0, count);
+          break;
+        default:
+          data = [];
+      }
+      
+      return callback({ data, error: null });
+    }
+  })
+});
+
+const createMockLimitedQuery = (tableName: string, count: number) => ({
+  then: async (callback: any) => {
+    let data;
+    
+    switch (tableName) {
+      case 'timezone_links':
+        data = mockStorage.timezoneLinks.slice(0, count);
+        break;
+      case 'user_notifications':
+        data = mockStorage.notifications.slice(0, count);
+        break;
+      default:
+        data = [];
+    }
+    
+    return callback({ data, error: null });
+  }
+});
 // Mock storage methods
 const mockStorage_api = {
   from: (bucket: string) => ({
@@ -336,7 +520,10 @@ export const createMockSupabaseClient = () => ({
   realtime: {
     channel: mockChannel,
     removeChannel: () => {}
-  }
+  },
+  
+  // Add count functionality
+  count: async () => ({ count: 0, error: null })
 });
 
 // Export mock analytics data generator

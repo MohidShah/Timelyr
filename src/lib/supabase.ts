@@ -67,20 +67,24 @@ export type Database = {
       user_profiles: {
         Row: {
           id: string;
+          email: string;
           username: string | null;
           display_name: string;
-          email: string;
           avatar_url: string | null;
           bio: string | null;
+          phone: string | null;
+          company: string | null;
+          job_title: string | null;
+          website: string | null;
+          location: string | null;
+          language: string;
+          theme: string;
+          account_status: string;
+          email_verified: boolean;
+          phone_verified: boolean;
+          follower_count: number;
+          following_count: number;
           default_timezone: string;
-          date_format: string;
-          time_format: string;
-          business_hours_start: string;
-          business_hours_end: string;
-          email_notifications: boolean;
-          profile_visibility: 'public' | 'private' | 'team';
-          plan: 'starter' | 'pro';
-          links_created_this_month: number;
           created_at: string;
           updated_at: string;
         };

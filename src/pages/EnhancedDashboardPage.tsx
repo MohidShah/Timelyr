@@ -30,6 +30,33 @@ import { canCreateLink } from '../lib/plans';
 import { PlanUpgradePrompt } from '../components/PlanUpgradePrompt';
 import type { TimezoneLink } from '../lib/supabase';
 
+// Error Boundary Component
+class ErrorBoundary extends React.Component<
+  { children: React.ReactNode; fallback: React.ReactNode },
+  { hasError: boolean }
+> {
+  constructor(props: { children: React.ReactNode; fallback: React.ReactNode }) {
+    super(props);
+    this.state = { hasError: false };
+  }
+
+  static getDerivedStateFromError(error: any) {
+    return { hasError: true };
+  }
+
+  componentDidCatch(error: any, errorInfo: any) {
+    console.error('Component error:', error, errorInfo);
+  }
+
+  render() {
+    if (this.state.hasError) {
+      return this.props.fallback;
+    }
+
+    return this.props.children;
+  }
+}
+
 interface EnhancedDashboardPageProps {
   user: any;
   userProfile: any;
@@ -578,7 +605,7 @@ export const EnhancedDashboardPage: React.FC<EnhancedDashboardPageProps> = ({
       )}
 
       {activeTab === 'links' && (
-        <ErrorBoundary fallback={<LinkManagementErrorFallback onRetry={fetchDashboardData} />}>
+        <ErrorBoundary fallback={<LinkManagementErrorFallback onRetry={() => fetchDashboardData()} />}>
           <LinkManagement
             user={user}
             userProfile={userProfile}
@@ -609,33 +636,6 @@ export const EnhancedDashboardPage: React.FC<EnhancedDashboardPageProps> = ({
     </div>
   );
 };
-
-// Error Boundary Component
-class ErrorBoundary extends React.Component<
-  { children: React.ReactNode; fallback: React.ReactNode },
-  { hasError: boolean }
-> {
-  constructor(props: { children: React.ReactNode; fallback: React.ReactNode }) {
-    super(props);
-    this.state = { hasError: false };
-  }
-
-  static getDerivedStateFromError(error: any) {
-    return { hasError: true };
-  }
-
-  componentDidCatch(error: any, errorInfo: any) {
-    console.error('Component error:', error, errorInfo);
-  }
-
-  render() {
-    if (this.state.hasError) {
-      return this.props.fallback;
-    }
-
-    return this.props.children;
-  }
-}
 
 // Error Fallback Components
 const LinkManagementErrorFallback = ({ onRetry }: { onRetry: () => void }) => (

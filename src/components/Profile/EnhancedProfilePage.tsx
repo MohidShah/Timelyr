@@ -1,7 +1,11 @@
 import React, { useState, useEffect } from 'react';
 import { 
   User, 
-  Shield, 
+  Shield,
+  Lock,
+  Key,
+  ShieldCheck,
+  Monitor,
   Trash2, 
   Camera, 
   Save, 
@@ -24,6 +28,8 @@ import {
   Palette,
   Accessibility
 } from 'lucide-react';
+import { Badge } from '../ui/Badge';
+import { Separator } from '../ui/Separator';
 import { Button } from '../ui/Button';
 import { Input } from '../ui/Input';
 import { Card, CardContent, CardHeader } from '../ui/Card';
@@ -72,6 +78,8 @@ export const EnhancedProfilePage: React.FC = () => {
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [usernameSuggestions, setUsernameSuggestions] = useState<string[]>([]);
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
+  const [showPasswordDialog, setShowPasswordDialog] = useState(false);
+  const [showEmailDialog, setShowEmailDialog] = useState(false);
   const [activitySummary, setActivitySummary] = useState<any>(null);
 
   useEffect(() => {
