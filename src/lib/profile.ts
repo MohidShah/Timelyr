@@ -33,25 +33,40 @@ export const createUserProfile = async (userId: string, profileData: {
 // Get user profile
 export const getUserProfile = async (userId: string): Promise<UserProfile | null> => {
   try {
-    // Check if we have valid Supabase configuration
-    if (!import.meta.env.VITE_SUPABASE_URL || !import.meta.env.VITE_SUPABASE_ANON_KEY) {
+    // Check if we're in mock mode
+    const isMockMode = !import.meta.env.VITE_SUPABASE_URL || 
+                      !import.meta.env.VITE_SUPABASE_ANON_KEY || 
+                      import.meta.env.VITE_USE_MOCK_DB === 'true';
+    
+    if (isMockMode) {
+      console.log('Mock: Getting user profile for', userId);
       return null;
     }
 
-    const { data, error } = await supabase
+    // Add timeout to prevent hanging
+    const profilePromise = supabase
       .from('user_profiles')
       .select('*')
       .eq('id', userId)
-      .maybeSingle(); // Use maybeSingle to avoid errors when no profile exists
+      .maybeSingle();
+      
+    const timeoutPromise = new Promise((_, reject) => 
+      setTimeout(() => reject(new Error('Profile fetch timeout')), 3000)
+    );
+
+    const { data, error } = await Promise.race([
+      profilePromise,
+      timeoutPromise
+    ]) as any;
 
     if (error) {
-      console.error('Error fetching user profile:', error);
+      console.warn('Error fetching user profile:', error);
       return null;
     }
 
     return data;
   } catch (error) {
-    console.error('Failed to get user profile:', error);
+    console.warn('Failed to get user profile:', error);
     return null;
   }
 };
