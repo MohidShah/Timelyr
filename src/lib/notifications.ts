@@ -235,41 +235,6 @@ export const getUnreadNotificationCount = async (userId: string) => {
   }
 };
 
-// Update notification preferences
-export const updateNotificationPreferences = async (userId: string, preferences: Partial<NotificationPreferences>) => {
-  const { data, error } = await supabase
-    .from('user_preferences')
-    .upsert({
-      user_id: userId,
-      ...preferences,
-      updated_at: new Date().toISOString()
-    })
-    .select()
-    .single();
-    
-  if (error) throw error;
-  return data;
-};
-
-// Get notification preferences
-export const getNotificationPreferences = async (userId: string) => {
-  const { data, error } = await supabase
-    .from('user_preferences')
-    .select('notification_email, notification_browser, marketing_emails, weekly_digest')
-    .eq('user_id', userId)
-    .single();
-    
-  if (error && error.code !== 'PGRST116') throw error;
-  
-  // Return default preferences if none exist
-  return data || {
-    notification_email: true,
-    notification_browser: true,
-    marketing_emails: false,
-    weekly_digest: true
-  };
-};
-
 // Subscribe to real-time notifications
 export const subscribeToNotifications = (userId: string, callback: (notification: UserNotification) => void) => {
   const channel = supabase

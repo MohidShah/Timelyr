@@ -5,7 +5,7 @@ import { Card, CardContent, CardHeader } from '../ui/Card';
 import { 
   getNotificationPreferences, 
   updateNotificationPreferences 
-} from '../../lib/notifications';
+} from '../../lib/preferences';
 import { logUserActivity } from '../../lib/activity';
 
 interface NotificationSettingsProps {
