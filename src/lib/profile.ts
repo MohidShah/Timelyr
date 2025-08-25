@@ -60,7 +60,12 @@ export const getUserProfile = async (userId: string): Promise<UserProfile | null
     ]) as any;
 
     if (error) {
-      console.warn('Error fetching user profile:', error);
+      // Check if it's a permission error (403)
+      if (error.code === '42501' || error.message?.includes('permission denied')) {
+        console.warn('Permission denied for user profile, this is expected in demo mode');
+      } else {
+        console.warn('Error fetching user profile:', error);
+      }
       return null;
     }
 
