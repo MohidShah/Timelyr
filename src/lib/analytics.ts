@@ -1,5 +1,5 @@
 import { supabase } from './supabase';
-import { generateMockAnalyticsData } from './mockSupabase';
+import { generateMockAnalyticsData } from './mockData';
 import type { LinkAnalytics, TimezoneLink } from './supabase';
 
 // Track link view with analytics
