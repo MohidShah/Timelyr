@@ -190,7 +190,7 @@ export const analyzeBusinessHours = (scheduledTime: Date) => {
     { name: 'US West Coast', timezone: 'America/Los_Angeles' },
     { name: 'Europe', timezone: 'Europe/London' },
     { name: 'Asia Pacific', timezone: 'Asia/Tokyo' },
-    { name: 'India', timezone: 'Asia/Kolkata' },
+    { name: 'Pakistan', timezone: 'Asia/Karachi' },
     { name: 'Australia', timezone: 'Australia/Sydney' },
   ];
 
