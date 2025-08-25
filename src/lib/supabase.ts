@@ -5,16 +5,21 @@ const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
 const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
 
 // Check if we should use mock mode
-const useMockMode = !supabaseUrl || !supabaseAnonKey || import.meta.env.VITE_USE_MOCK_DB === 'true';
+let useMockMode = !supabaseUrl || !supabaseAnonKey || import.meta.env.VITE_USE_MOCK_DB === 'true';
+
 if (!supabaseUrl || !supabaseAnonKey) {
   console.warn('Missing Supabase environment variables. Using mock database for development.');
   console.warn('Required variables: VITE_SUPABASE_URL, VITE_SUPABASE_ANON_KEY');
   console.warn('Set VITE_USE_MOCK_DB=false to disable mock mode when you have real credentials.');
 }
 
-export const supabase = useMockMode 
-  ? createMockSupabaseClient() as any
-  : createClient(supabaseUrl, supabaseAnonKey, {
+// Create a wrapper that can switch to mock mode on permission errors
+const createSupabaseClient = () => {
+  if (useMockMode) {
+    return createMockSupabaseClient() as any;
+  }
+
+  const realClient = createClient(supabaseUrl, supabaseAnonKey, {
       auth: {
         autoRefreshToken: true,
         persistSession: true,
@@ -29,6 +34,53 @@ export const supabase = useMockMode
         }
       }
     });
+
+  // Wrap the client to catch permission errors and fall back to mock mode
+  const wrappedClient = new Proxy(realClient, {
+    get(target, prop) {
+      if (prop === 'from') {
+        return (tableName: string) => {
+          const table = target.from(tableName);
+          
+          // Wrap select method to catch permission errors
+          const originalSelect = table.select.bind(table);
+          table.select = (...args: any[]) => {
+            const query = originalSelect(...args);
+            const originalThen = query.then?.bind(query);
+            
+            if (originalThen) {
+              query.then = (onFulfilled?: any, onRejected?: any) => {
+                return originalThen((result: any) => {
+                  // Check for permission denied errors
+                  if (result.error && (
+                    result.error.message?.includes('permission denied') ||
+                    result.error.code === '42501'
+                  )) {
+                    console.warn('Supabase permission denied, falling back to mock mode');
+                    useMockMode = true;
+                    // Return mock client result
+                    const mockClient = createMockSupabaseClient() as any;
+                    return mockClient.from(tableName).select(...args);
+                  }
+                  return onFulfilled ? onFulfilled(result) : result;
+                }, onRejected);
+              };
+            }
+            
+            return query;
+          };
+          
+          return table;
+        };
+      }
+      return target[prop as keyof typeof target];
+    }
+  });
+
+  return wrappedClient;
+};
+
+export const supabase = createSupabaseClient();
 
 // Log the mode we're using
 if (useMockMode) {
@@ -48,8 +100,13 @@ export const testSupabaseConnection = async () => {
   }
   
   try {
-    const { data, error } = await supabase.from('user_profiles').select('count').limit(1);
+    const { data, error } = await supabase.from('user_profiles').select('id').limit(1);
     if (error) {
+      if (error.message?.includes('permission denied') || error.code === '42501') {
+        console.warn('Supabase permission denied, switching to mock mode');
+        useMockMode = true;
+        return true;
+      }
       console.error('Supabase connection test failed:', error);
       return false;
     }

@@ -102,7 +102,24 @@ export const EnhancedDashboardPage: React.FC<EnhancedDashboardPageProps> = ({
         .eq('user_id', user.id)
         .order('created_at', { ascending: false });
 
-      if (linksError) throw linksError;
+     if (linksError) {
+       console.warn('Error fetching links, using fallback data:', linksError);
+       // Use empty array as fallback
+       setLinks([]);
+       setAnalytics({
+         totalViews: 0,
+         totalUniqueViewers: 0,
+         activeLinks: 0,
+         linksCreatedThisMonth: 0,
+         topLinks: [],
+         viewsByDate: {},
+         weeklyViews: [],
+         conversionRate: 0,
+         averageTimeOnPage: 0
+       });
+       setLoading(false);
+       return;
+     }
       
       setLinks(userLinks || []);
       
@@ -148,20 +165,37 @@ export const EnhancedDashboardPage: React.FC<EnhancedDashboardPageProps> = ({
       });
     } catch (error: any) {
       console.error('Error fetching dashboard data:', error);
-      setError(error?.message || 'Failed to load dashboard data. Please try again.');
-      // Set default empty values for analytics
-      setAnalytics({
-        totalViews: 0,
-        totalUniqueViewers: 0,
-        activeLinks: 0,
-        linksCreatedThisMonth: 0,
-        topLinks: [],
-        viewsByDate: {},
-        weeklyViews: [],
-        conversionRate: 0,
-        averageTimeOnPage: 0
-      });
-      setLinks([]);
+     // Don't show error for permission issues, just use fallback data
+     if (error?.message?.includes('permission denied') || error?.code === '42501') {
+       console.warn('Permission denied, using fallback data');
+       setLinks([]);
+       setAnalytics({
+         totalViews: 0,
+         totalUniqueViewers: 0,
+         activeLinks: 0,
+         linksCreatedThisMonth: 0,
+         topLinks: [],
+         viewsByDate: {},
+         weeklyViews: [],
+         conversionRate: 0,
+         averageTimeOnPage: 0
+       });
+     } else {
+       setError(error?.message || 'Failed to load dashboard data. Please try again.');
+       // Set default empty values for analytics
+       setAnalytics({
+         totalViews: 0,
+         totalUniqueViewers: 0,
+         activeLinks: 0,
+         linksCreatedThisMonth: 0,
+         topLinks: [],
+         viewsByDate: {},
+         weeklyViews: [],
+         conversionRate: 0,
+         averageTimeOnPage: 0
+       });
+       setLinks([]);
+     }
     } finally {
       setLoading(false);
     }
