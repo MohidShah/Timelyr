@@ -84,4 +84,6 @@ export const mockSupabase = {
   })
 };
 
+export const createMockSupabaseClient = () => mockSupabase;
+
 export default mockSupabase;
