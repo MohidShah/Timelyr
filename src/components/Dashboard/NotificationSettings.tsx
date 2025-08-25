@@ -3,9 +3,9 @@ import { Bell, Mail, Globe, Smartphone, Clock, Shield, Save, AlertCircle, X, Ref
 import { Button } from '../ui/Button';
 import { Card, CardContent, CardHeader } from '../ui/Card';
 import { 
-  getNotificationPreferences, 
-  updateNotificationPreferences 
-} from '../../lib/notifications';
+  getUserPreferences, 
+  updateUserPreferences 
+} from '../../lib/preferences';
 import { logUserActivity } from '../../lib/activity';
 
 interface NotificationSettingsProps {
@@ -35,7 +35,7 @@ export const NotificationSettings: React.FC<NotificationSettingsProps> = ({ user
     setLoading(true);
     setError(null);
     try {
-      const prefs = await getNotificationPreferences(userId);
+      const prefs = await getUserPreferences(userId);
       if (prefs) {
         setPreferences({
           notification_email: prefs.notification_email,
@@ -60,7 +60,7 @@ export const NotificationSettings: React.FC<NotificationSettingsProps> = ({ user
     try {
       setSaving(true);
       setError(null);
-      await updateNotificationPreferences(userId, preferences);
+      await updateUserPreferences(userId, preferences);
       
       // Log activity
       await logUserActivity(userId, 'preferences_updated', { 

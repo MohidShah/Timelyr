@@ -51,7 +51,6 @@ import {
   applyPreferencesToDOM
 } from '../../lib/preferences';
 import { getUserActivityHistory, getActivitySummary, logUserActivity } from '../../lib/activity';
-import { getNotificationPreferences, updateNotificationPreferences } from '../../lib/notifications';
 import { supabase } from '../../lib/supabase';
 import type { UserProfile } from '../../lib/supabase';
 
