@@ -38,36 +38,54 @@ function App() {
   useEffect(() => {
     const initializeApp = async () => {
       try {
-        // Quick check if Supabase is configured
-        if (!import.meta.env.VITE_SUPABASE_URL || !import.meta.env.VITE_SUPABASE_ANON_KEY) {
-          console.warn('Supabase not configured, running in demo mode');
+        // Check if Supabase is configured
+        const hasSupabaseConfig = import.meta.env.VITE_SUPABASE_URL && import.meta.env.VITE_SUPABASE_ANON_KEY;
+        const useMockMode = !hasSupabaseConfig || import.meta.env.VITE_USE_MOCK_DB === 'true';
+
+        if (useMockMode) {
+          console.warn('Running in demo mode with mock data');
           setLoading(false);
           setInitialized(true);
           return;
         }
 
-        // Get initial session
-        const { data: { session }, error: sessionError } = await supabase.auth.getSession();
-        
-        if (sessionError) {
-          console.error('Session error:', sessionError);
-          // Continue without user if session fails
-        }
+        // Try to get session with timeout
+        const sessionPromise = supabase.auth.getSession();
+        const timeoutPromise = new Promise((_, reject) => 
+          setTimeout(() => reject(new Error('Session timeout')), 5000)
+        );
 
-        setUser(session?.user ?? null);
-        
-        if (session?.user) {
-          try {
-            await fetchUserProfile(session.user.id);
-          } catch (profileError) {
-            console.error('Profile fetch error:', profileError);
-            // Set profile to null if fetch fails
+        try {
+          const { data: { session }, error: sessionError } = await Promise.race([
+            sessionPromise,
+            timeoutPromise
+          ]) as any;
+          
+          if (sessionError) {
+            console.warn('Session error, continuing without user:', sessionError);
+            setUser(null);
             setUserProfile(null);
+          } else {
+            setUser(session?.user ?? null);
+            
+            if (session?.user) {
+              try {
+                await fetchUserProfile(session.user.id);
+              } catch (profileError) {
+                console.warn('Profile fetch error, continuing without profile:', profileError);
+                setUserProfile(null);
+              }
+            }
           }
+        } catch (timeoutError) {
+          console.warn('Session fetch timed out, continuing in demo mode');
+          setUser(null);
+          setUserProfile(null);
         }
       } catch (error) {
-        console.error('App initialization error:', error);
-        // Continue with app even if initialization has issues
+        console.warn('App initialization error, continuing in demo mode:', error);
+        setUser(null);
+        setUserProfile(null);
       } finally {
         setLoading(false);
         setInitialized(true);
@@ -86,14 +104,14 @@ function App() {
           try {
             await fetchUserProfile(session.user.id);
           } catch (error) {
-            console.error('Auth state change profile error:', error);
+            console.warn('Auth state change profile error:', error);
             setUserProfile(null);
           }
         } else {
           setUserProfile(null);
         }
       } catch (error) {
-        console.error('Auth state change error:', error);
+        console.warn('Auth state change error:', error);
       }
     });
 
@@ -105,8 +123,9 @@ function App() {
       const profile = await getUserProfile(userId);
       setUserProfile(profile);
     } catch (error) {
-      console.error('Error fetching user profile:', error);
+      console.warn('Error fetching user profile:', error);
       setUserProfile(null);
+      throw error; // Re-throw to be handled by caller
     }
   };
 
