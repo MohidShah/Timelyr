@@ -109,10 +109,10 @@ export const Footer: React.FC = () => {
 
         <div className="border-t border-gray-200 mt-8 pt-8 flex flex-col md:flex-row justify-between items-center">
           <p className="text-gray-500 text-sm">
-            © 2024 Timelyr Inc. All rights reserved.
+            © 2025 Timelyr Inc. All rights reserved.
           </p>
           <div className="flex items-center space-x-6 mt-4 md:mt-0">
-            <span className="text-sm text-gray-500">Made with ❤️ in San Francisco</span>
+            <span className="text-sm text-gray-500">Made with ❤️</span>
             <div className="flex items-center space-x-2">
               <div className="w-2 h-2 bg-green-400 rounded-full"></div>
               <span className="text-sm text-gray-500">All systems operational</span>

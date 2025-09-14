@@ -18,6 +18,11 @@ import { useState, useEffect, Suspense } from 'react';
 import { supabase } from './lib/supabase';
 import { getUserProfile } from './lib/profile';
 import { MockDataIndicator } from './components/MockDataIndicator';
+import { SecurityHeaders } from './components/SecurityHeaders';
+import { MaintenanceMode } from './components/ui/MaintenanceMode';
+import { CookieConsent } from './components/ui/CookieConsent';
+import { monitoring, trackUserSession } from './lib/monitoring';
+import { checkRateLimit, SECURITY_CONFIG } from './lib/security';
 
 // Loading component
 const LoadingSpinner = () => (
@@ -34,8 +39,41 @@ function App() {
   const [userProfile, setUserProfile] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [initialized, setInitialized] = useState(false);
+  const [maintenanceMode, setMaintenanceMode] = useState(false);
+  const [showCookieConsent, setShowCookieConsent] = useState(false);
 
   useEffect(() => {
+    // Check if cookie consent is needed
+    const consent = localStorage.getItem('cookie-consent');
+    if (!consent) {
+      setShowCookieConsent(true);
+    }
+  }, []);
+
+  const handleCookieConsent = (preferences: any) => {
+    setShowCookieConsent(false);
+    
+    // Initialize analytics based on consent
+    if (preferences.analytics) {
+      // Initialize analytics tracking
+      console.log('Analytics enabled');
+    }
+    
+    if (preferences.marketing) {
+      // Initialize marketing pixels
+      console.log('Marketing cookies enabled');
+    }
+  };
+
+  useEffect(() => {
+    // Check maintenance mode
+    if (import.meta.env.VITE_MAINTENANCE_MODE === 'true') {
+      setMaintenanceMode(true);
+      setLoading(false);
+      setInitialized(true);
+      return;
+    }
+
     const initializeApp = async () => {
       try {
         // Check if Supabase is configured
@@ -46,6 +84,11 @@ function App() {
           console.warn('Running in demo mode with mock data');
           setLoading(false);
           setInitialized(true);
+          
+          // Track user session if authenticated
+          if (session?.user) {
+            trackUserSession(session.user.id);
+          }
           return;
         }
 
@@ -133,10 +176,24 @@ function App() {
     return <LoadingSpinner />;
   }
 
+  // Show maintenance mode if enabled
+  if (maintenanceMode) {
+    return (
+      <>
+        <SecurityHeaders />
+        <MaintenanceMode />
+      </>
+    );
+  }
+
   return (
     <Suspense fallback={<LoadingSpinner />}>
+      <SecurityHeaders />
       <Router>
         <MockDataIndicator />
+        {showCookieConsent && (
+          <CookieConsent onAccept={handleCookieConsent} />
+        )}
         <Routes>
           {/* Dashboard Routes */}
           <Route path="/dashboard/*" element={

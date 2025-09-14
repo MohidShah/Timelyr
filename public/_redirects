@@ -1,0 +1,19 @@
+# Netlify redirects and rewrites
+
+# SPA fallback - serve index.html for all routes
+/*    /index.html   200
+
+# Security redirects
+/admin/*  https://timelyr.com/  301
+/.env     https://timelyr.com/  301
+/.git/*   https://timelyr.com/  301
+
+# Legacy redirects (if migrating from another domain)
+# https://old-domain.com/*  https://timelyr.com/:splat  301!
+
+# Force HTTPS
+http://timelyr.com/*  https://timelyr.com/:splat  301!
+http://www.timelyr.com/*  https://timelyr.com/:splat  301!
+
+# Redirect www to non-www
+https://www.timelyr.com/*  https://timelyr.com/:splat  301!

@@ -1,4 +1,6 @@
 import { createClient } from '@supabase/supabase-js';
+import { monitoring } from './monitoring';
+import { checkRateLimit, SECURITY_CONFIG } from './security';
 
 // Check if we should use mock database
 const useMockDb = import.meta.env.VITE_USE_MOCK_DB === 'true';
@@ -178,7 +180,83 @@ const mockSupabase = {
 // Create and export the Supabase client
 export const supabase = useMockDb || !supabaseUrl || !supabaseAnonKey
   ? mockSupabase
-  : createClient(supabaseUrl, supabaseAnonKey);
+  : createClient(supabaseUrl, supabaseAnonKey, {
+      auth: {
+        autoRefreshToken: true,
+        persistSession: true,
+        detectSessionInUrl: true,
+        flowType: 'pkce'
+      },
+      global: {
+        headers: {
+          'X-Client-Info': 'timelyr-web@1.0.0'
+        }
+      }
+    });
+
+// Enhanced Supabase client with monitoring and rate limiting
+export const createSecureSupabaseClient = () => {
+  if (useMockDb || !supabaseUrl || !supabaseAnonKey) {
+    return mockSupabase;
+  }
+
+  const client = createClient(supabaseUrl, supabaseAnonKey, {
+    auth: {
+      autoRefreshToken: true,
+      persistSession: true,
+      detectSessionInUrl: true,
+      flowType: 'pkce'
+    },
+    global: {
+      headers: {
+        'X-Client-Info': 'timelyr-web@1.0.0'
+      }
+    }
+  });
+
+  // Add monitoring to auth methods
+  const originalSignIn = client.auth.signInWithPassword;
+  client.auth.signInWithPassword = async (credentials) => {
+    const clientId = `${credentials.email}-${Date.now()}`;
+    
+    // Rate limit login attempts
+    if (!checkRateLimit(`login-${credentials.email}`, SECURITY_CONFIG.RATE_LIMITS.LOGIN_ATTEMPTS)) {
+      monitoring.reportError({
+        message: 'Rate limit exceeded for login attempts',
+        severity: 'medium',
+        url: window.location.href,
+        userAgent: navigator.userAgent,
+        timestamp: Date.now()
+      });
+      throw new Error('Too many login attempts. Please try again later.');
+    }
+
+    try {
+      const result = await originalSignIn.call(client.auth, credentials);
+      if (result.error) {
+        monitoring.reportError({
+          message: `Login failed: ${result.error.message}`,
+          severity: 'low',
+          url: window.location.href,
+          userAgent: navigator.userAgent,
+          timestamp: Date.now()
+        });
+      }
+      return result;
+    } catch (error: any) {
+      monitoring.reportError({
+        message: `Login error: ${error.message}`,
+        severity: 'medium',
+        url: window.location.href,
+        userAgent: navigator.userAgent,
+        timestamp: Date.now()
+      });
+      throw error;
+    }
+  };
+
+  return client;
+};
 
 // Re-export types for convenience
 export type { Session, User } from '@supabase/supabase-js';

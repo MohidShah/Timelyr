@@ -6,8 +6,12 @@
   "scripts": {
     "dev": "vite",
     "build": "vite build",
+    "build:production": "NODE_ENV=production vite build",
     "lint": "eslint .",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "type-check": "tsc --noEmit",
+    "security-audit": "npm audit --audit-level moderate",
+    "analyze": "npx vite-bundle-analyzer"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.53.0",

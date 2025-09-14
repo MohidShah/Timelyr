@@ -4,6 +4,8 @@ import { X, Mail, Lock, User } from 'lucide-react';
 import { Button } from '../ui/Button';
 import { Input } from '../ui/Input';
 import { supabase } from '../../lib/supabase';
+import { validateAuthCredentials, sanitizeUserInput } from '../../lib/validation';
+import { validatePasswordStrength } from '../../lib/security';
 import { createUserProfile } from '../../lib/profile';
 
 interface AuthModalProps {
@@ -18,24 +20,49 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, mode: ini
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [fullName, setFullName] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+  const [validationErrors, setValidationErrors] = useState<Record<string, string>>({});
+  const [passwordStrength, setPasswordStrength] = useState({ score: 0, feedback: [] as string[] });
+
+  // Password strength validation
+  useEffect(() => {
+    if (mode === 'signup' && password) {
+      const strength = validatePasswordStrength(password);
+      setPasswordStrength(strength);
+    }
+  }, [password, mode]);
 
   if (!isOpen) return null;
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setLoading(true);
+    setValidationErrors({});
     setError('');
+
+    // Validate input
+    const validation = validateAuthCredentials({
+      email: sanitizeUserInput(email),
+      password,
+      confirmPassword: mode === 'signup' ? confirmPassword : undefined
+    });
+
+    if (!validation.isValid) {
+      setValidationErrors(validation.errors);
+      return;
+    }
+
+    setLoading(true);
 
     try {
       if (mode === 'signup') {
         const { data, error } = await supabase.auth.signUp({
-          email,
+          email: sanitizeUserInput(email),
           password,
           options: {
             data: {
-              full_name: fullName,
+              full_name: sanitizeUserInput(fullName, 100),
             },
           },
         });
@@ -46,7 +73,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, mode: ini
           try {
             await createUserProfile(data.user.id, {
               email: data.user.email!,
-              display_name: fullName || data.user.email!.split('@')[0],
+              display_name: sanitizeUserInput(fullName || data.user.email!.split('@')[0], 100),
             });
           } catch (profileError) {
             console.error('Error creating profile:', profileError);
@@ -54,7 +81,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, mode: ini
         }
       } else {
         const { error } = await supabase.auth.signInWithPassword({
-          email,
+          email: sanitizeUserInput(email),
           password,
         });
         if (error) throw error;
@@ -91,6 +118,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, mode: ini
               type="text"
               value={fullName}
               onChange={(e) => setFullName(e.target.value)}
+              error={validationErrors.displayName}
               required
             />
           )}
@@ -100,6 +128,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, mode: ini
             type="email"
             value={email}
             onChange={(e) => setEmail(e.target.value)}
+            error={validationErrors.email}
             required
           />
           
@@ -108,8 +137,44 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, mode: ini
             type="password"
             value={password}
             onChange={(e) => setPassword(e.target.value)}
+            error={validationErrors.password}
             required
           />
+
+          {mode === 'signup' && password && (
+            <div className="space-y-2">
+              <div className="flex items-center justify-between text-sm">
+                <span className="text-gray-600">Password strength:</span>
+                <span className={`font-medium ${
+                  passwordStrength.score < 50 ? 'text-red-600' : 
+                  passwordStrength.score < 75 ? 'text-yellow-600' : 'text-green-600'
+                }`}>
+                  {passwordStrength.score < 50 ? 'Weak' : 
+                   passwordStrength.score < 75 ? 'Good' : 'Strong'}
+                </span>
+              </div>
+              <div className="w-full bg-gray-200 rounded-full h-2">
+                <div
+                  className={`h-2 rounded-full transition-all duration-300 ${
+                    passwordStrength.score < 50 ? 'bg-red-500' : 
+                    passwordStrength.score < 75 ? 'bg-yellow-500' : 'bg-green-500'
+                  }`}
+                  style={{ width: `${passwordStrength.score}%` }}
+                ></div>
+              </div>
+            </div>
+          )}
+
+          {mode === 'signup' && (
+            <Input
+              label="Confirm Password"
+              type="password"
+              value={confirmPassword}
+              onChange={(e) => setConfirmPassword(e.target.value)}
+              error={validationErrors.confirmPassword}
+              required
+            />
+          )}
 
           {error && (
             <div className="p-3 bg-red-50 border border-red-200 rounded-lg">

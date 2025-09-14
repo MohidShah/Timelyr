@@ -1,0 +1,14 @@
+User-agent: *
+Allow: /
+Disallow: /admin/
+Disallow: /api/
+Disallow: /.env
+Disallow: /.git/
+Disallow: /dashboard/
+Disallow: /profile/
+
+# Sitemap
+Sitemap: https://timelyr.com/sitemap.xml
+
+# Crawl delay
+Crawl-delay: 1
