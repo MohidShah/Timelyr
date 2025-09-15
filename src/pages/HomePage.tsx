@@ -2,15 +2,16 @@ import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { Clock, Share2, Globe, Zap, CheckCircle, ArrowRight } from 'lucide-react';
 import { WorldClock } from '../components/WorldClock';
-import { TimeInput } from '../components/TimeInput';
+import { HeroSection } from '../components/HomePage/HeroSection';
 import { Button } from '../components/ui/Button';
 import { Card, CardContent } from '../components/ui/Card';
+import { useToast } from '../components/ui/Toast';
 import { supabase } from '../lib/supabase';
 import { generateSlug } from '../lib/timezone';
 
 export const HomePage: React.FC = () => {
-  const [showTimeInput, setShowTimeInput] = useState(false);
   const navigate = useNavigate();
+  const { addToast } = useToast();
 
   const handleTimeSelect = async (date: Date, timezone: string, title: string, description?: string) => {
     try {
@@ -37,42 +38,28 @@ export const HomePage: React.FC = () => {
       if (error) throw error;
 
       navigate(`/link/${slug}`);
+      
+      addToast({
+        type: 'success',
+        message: 'Timezone link created successfully!'
+      });
     } catch (error) {
       console.error('Error creating link:', error);
-      alert('Failed to create link. Please try again.');
+      addToast({
+        type: 'error',
+        message: 'Failed to create link. Please try again.'
+      });
     }
   };
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-purple-50">
       {/* Hero Section */}
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-20 pb-16">
-        <div className="text-center mb-16">
-          <h1 className="text-5xl md:text-6xl font-bold text-gray-900 mb-6">
-            Never miss a meeting
-            <span className="text-blue-600"> across timezones</span>
-          </h1>
-          <p className="text-xl text-gray-600 mb-8 max-w-3xl mx-auto">
-            Share meeting times that automatically show in everyone's local timezone. 
-            No more "What time is that for me?" confusion.
-          </p>
-          
-          {!showTimeInput ? (
-            <Button 
-              size="lg" 
-              onClick={() => setShowTimeInput(true)}
-              className="text-lg px-8 py-4"
-            >
-              <Clock className="w-5 h-5 mr-2" />
-              Create Your First Link
-            </Button>
-          ) : (
-            <TimeInput onTimeSelect={handleTimeSelect} userPlan="starter" />
-          )}
-        </div>
+      <HeroSection onCreateLink={handleTimeSelect} />
 
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pb-16">
         {/* World Clock Demo */}
-        <div className="mb-20">
+        <div id="demo-section" className="mb-20">
           <h2 className="text-3xl font-bold text-center text-gray-800 mb-8">
             See the timezone problem in action
           </h2>
@@ -149,7 +136,7 @@ export const HomePage: React.FC = () => {
             <Button 
               size="lg" 
               variant="secondary"
-              onClick={() => setShowTimeInput(true)}
+              onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}
             >
               Try It Free
             </Button>

@@ -14,6 +14,7 @@ import { HowItWorksPage } from './pages/HowItWorksPage';
 import { PrivacyPage } from './pages/PrivacyPage';
 import { TermsPage } from './pages/TermsPage';
 import { ContactPage } from './pages/ContactPage';
+import { AdminPage } from './pages/AdminPage';
 import { useState, useEffect, Suspense } from 'react';
 import { supabase } from './lib/supabase';
 import { getUserProfile } from './lib/profile';
@@ -21,6 +22,7 @@ import { MockDataIndicator } from './components/MockDataIndicator';
 import { SecurityHeaders } from './components/SecurityHeaders';
 import { MaintenanceMode } from './components/ui/MaintenanceMode';
 import { CookieConsent } from './components/ui/CookieConsent';
+import { ToastProvider } from './components/ui/Toast';
 import { monitoring, trackUserSession } from './lib/monitoring';
 import { checkRateLimit, SECURITY_CONFIG } from './lib/security';
 
@@ -187,60 +189,65 @@ function App() {
   }
 
   return (
-    <Suspense fallback={<LoadingSpinner />}>
-      <SecurityHeaders />
-      <Router>
-        <MockDataIndicator />
-        {showCookieConsent && (
-          <CookieConsent onAccept={handleCookieConsent} />
-        )}
-        <Routes>
-          {/* Dashboard Routes */}
-          <Route path="/dashboard/*" element={
-            user ? (
-              <DashboardLayout user={user} userProfile={userProfile}>
-                <Routes>
-                  <Route index element={<DashboardPage />} />
-                  <Route path="analytics" element={<AnalyticsPage />} />
-                </Routes>
-              </DashboardLayout>
-            ) : (
-              <Navigate to="/" replace />
-            )
-          } />
-          
-          <Route path="/profile" element={
-            user ? (
-              <DashboardLayout user={user} userProfile={userProfile}>
-                <ProfilePage />
-              </DashboardLayout>
-            ) : (
-              <Navigate to="/" replace />
-            )
-          } />
+    <ToastProvider>
+      <Suspense fallback={<LoadingSpinner />}>
+        <SecurityHeaders />
+        <Router>
+          <MockDataIndicator />
+          {showCookieConsent && (
+            <CookieConsent onAccept={handleCookieConsent} />
+          )}
+          <Routes>
+            {/* Admin Routes */}
+            <Route path="/admin" element={<AdminPage />} />
+            
+            {/* Dashboard Routes */}
+            <Route path="/dashboard/*" element={
+              user ? (
+                <DashboardLayout user={user} userProfile={userProfile}>
+                  <Routes>
+                    <Route index element={<DashboardPage />} />
+                    <Route path="analytics" element={<AnalyticsPage />} />
+                  </Routes>
+                </DashboardLayout>
+              ) : (
+                <Navigate to="/" replace />
+              )
+            } />
+            
+            <Route path="/profile" element={
+              user ? (
+                <DashboardLayout user={user} userProfile={userProfile}>
+                  <ProfilePage />
+                </DashboardLayout>
+              ) : (
+                <Navigate to="/" replace />
+              )
+            } />
 
-          {/* Public Routes */}
-          <Route path="/*" element={
-            <div className="min-h-screen bg-white">
-              <Navbar user={user} userProfile={userProfile} />
-              <Suspense fallback={<LoadingSpinner />}>
-                <Routes>
-                  <Route path="/" element={<HomePage />} />
-                  <Route path="/link/:slug" element={<LinkViewPage />} />
-                  <Route path="/pricing" element={<PricingPage />} />
-                  <Route path="/about" element={<AboutPage />} />
-                  <Route path="/how-it-works" element={<HowItWorksPage />} />
-                  <Route path="/privacy" element={<PrivacyPage />} />
-                  <Route path="/terms" element={<TermsPage />} />
-                  <Route path="/contact" element={<ContactPage />} />
-                </Routes>
-              </Suspense>
-              <Footer />
-            </div>
-          } />
-        </Routes>
-      </Router>
-    </Suspense>
+            {/* Public Routes */}
+            <Route path="/*" element={
+              <div className="min-h-screen bg-white">
+                <Navbar user={user} userProfile={userProfile} />
+                <Suspense fallback={<LoadingSpinner />}>
+                  <Routes>
+                    <Route path="/" element={<HomePage />} />
+                    <Route path="/link/:slug" element={<LinkViewPage />} />
+                    <Route path="/pricing" element={<PricingPage />} />
+                    <Route path="/about" element={<AboutPage />} />
+                    <Route path="/how-it-works" element={<HowItWorksPage />} />
+                    <Route path="/privacy" element={<PrivacyPage />} />
+                    <Route path="/terms" element={<TermsPage />} />
+                    <Route path="/contact" element={<ContactPage />} />
+                  </Routes>
+                </Suspense>
+                <Footer />
+              </div>
+            } />
+          </Routes>
+        </Router>
+      </Suspense>
+    </ToastProvider>
   );
 }
 

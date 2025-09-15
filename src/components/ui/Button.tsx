@@ -2,7 +2,7 @@ import React from 'react';
 import { Loader2 } from 'lucide-react';
 
 interface ButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElement> {
-  variant?: 'primary' | 'secondary' | 'tertiary' | 'danger';
+  variant?: 'primary' | 'secondary' | 'tertiary' | 'danger' | 'outline' | 'ghost';
   size?: 'sm' | 'md' | 'lg';
   loading?: boolean;
   children: React.ReactNode;
@@ -24,6 +24,8 @@ export const Button: React.FC<ButtonProps> = ({
     secondary: 'bg-white border border-gray-300 hover:bg-gray-50 text-gray-700 focus:ring-blue-500',
     tertiary: 'bg-transparent hover:bg-gray-100 text-gray-700 focus:ring-blue-500',
     danger: 'bg-red-600 hover:bg-red-700 text-white focus:ring-red-500',
+    outline: 'border border-gray-300 bg-transparent hover:bg-gray-50 text-gray-700 focus:ring-blue-500',
+    ghost: 'bg-transparent hover:bg-gray-100 text-gray-700 focus:ring-blue-500',
   };
 
   const sizeClasses = {

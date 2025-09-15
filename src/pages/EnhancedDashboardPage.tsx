@@ -20,10 +20,17 @@ import {
   RefreshCcw
 } from 'lucide-react';
 import { LinkManagement } from '../components/Dashboard/LinkManagement';
+import { QuickActions } from '../components/Dashboard/QuickActions';
+import { RecentActivity } from '../components/Dashboard/RecentActivity';
+import { UsageWidget } from '../components/Dashboard/UsageWidget';
 import { ProfileSettings } from '../components/Profile/ProfileSettings';
 import { NotificationSettings } from '../components/Dashboard/NotificationSettings';
+import { AnalyticsChart } from '../components/Analytics/AnalyticsChart';
+import { EmptyState } from '../components/ui/EmptyState';
+import { StatusIndicator } from '../components/ui/StatusIndicator';
 import { Button } from '../components/ui/Button';
 import { Card, CardContent, CardHeader } from '../components/ui/Card';
+import { useToast } from '../components/ui/Toast';
 import { getUserAnalytics } from '../lib/analytics';
 import { supabase } from '../lib/supabase';
 import { canCreateLink } from '../lib/plans';
@@ -72,6 +79,7 @@ export const EnhancedDashboardPage: React.FC<EnhancedDashboardPageProps> = ({
   const [error, setError] = useState<string | null>(null);
   const [showUpgradePrompt, setShowUpgradePrompt] = useState(false);
   const [upgradeReason, setUpgradeReason] = useState('');
+  const { addToast } = useToast();
   const [analytics, setAnalytics] = useState({
     totalViews: 0,
     totalUniqueViewers: 0,
@@ -579,6 +587,35 @@ export const EnhancedDashboardPage: React.FC<EnhancedDashboardPageProps> = ({
             </CardContent>
           </Card>
 
+          {/* Analytics Chart */}
+          {analytics.weeklyViews.length > 0 && (
+            <Card>
+              <CardHeader>
+                <h3 className="text-lg font-semibold text-gray-800">Views This Week</h3>
+              </CardHeader>
+              <CardContent>
+                <AnalyticsChart
+                  data={analytics.weeklyViews}
+                  type="bar"
+                  height={200}
+                />
+              </CardContent>
+            </Card>
+          )}
+
+          {/* Recent Activity */}
+          <RecentActivity userId={user.id} limit={5} />
+
+          {/* Usage Widget */}
+          <UsageWidget 
+            userProfile={userProfile}
+            analytics={{
+              linksCreatedThisMonth: analytics.linksCreatedThisMonth,
+              totalViews: analytics.totalViews,
+              activeLinks: analytics.activeLinks
+            }}
+          />
+
           {/* Recent Activity */}
           <Card>
             <CardHeader>
@@ -655,8 +692,11 @@ export const EnhancedDashboardPage: React.FC<EnhancedDashboardPageProps> = ({
             user={user}
             userProfile={userProfile}
             onProfileUpdate={(updatedProfile) => {
-              // Update the profile in parent component
-              window.location.reload(); // Simple refresh for now
+              addToast({
+                type: 'success',
+                message: 'Profile updated successfully!'
+              });
+              fetchDashboardData();
             }}
           />
         </ErrorBoundary>

@@ -1,8 +1,10 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { X, Mail, Lock, User } from 'lucide-react';
+import { useEffect } from 'react';
 import { Button } from '../ui/Button';
 import { Input } from '../ui/Input';
+import { useToast } from '../ui/Toast';
 import { supabase } from '../../lib/supabase';
 import { validateAuthCredentials, sanitizeUserInput } from '../../lib/validation';
 import { validatePasswordStrength } from '../../lib/security';
@@ -25,6 +27,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, mode: ini
   const [error, setError] = useState('');
   const [validationErrors, setValidationErrors] = useState<Record<string, string>>({});
   const [passwordStrength, setPasswordStrength] = useState({ score: 0, feedback: [] as string[] });
+  const { addToast } = useToast();
 
   // Password strength validation
   useEffect(() => {
@@ -89,8 +92,17 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, mode: ini
       onClose();
       // Redirect to dashboard after successful login/signup
       navigate('/dashboard');
+      
+      addToast({
+        type: 'success',
+        message: mode === 'signup' ? 'Account created successfully!' : 'Welcome back!'
+      });
     } catch (error: any) {
       setError(error.message);
+      addToast({
+        type: 'error',
+        message: error.message
+      });
     } finally {
       setLoading(false);
     }
